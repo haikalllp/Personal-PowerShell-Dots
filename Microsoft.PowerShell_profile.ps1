@@ -630,6 +630,69 @@ function winutildev {
     # Run the WinUtil pre-release script
     try { irm https://christitus.com/windev | iex } catch { Write-Warning "Failed to load winutildev: $($_.Exception.Message)" }
 }
+
+function Get-PubIP {
+    # Retrieve public IP address
+    try {
+        $ip = (Invoke-WebRequest -Uri "http://ifconfig.me/ip" -UseBasicParsing).Content.Trim()
+        Write-Host "Public IP: $ip" -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+    } catch {
+        Write-Warning "Failed to retrieve public IP: $($_.Exception.Message)"
+    }
+}
+
+function export([string]$name, [string]$value) {
+    # Set environment variable for current session
+    [System.Environment]::SetEnvironmentVariable($name, $value, [System.EnvironmentVariableTarget]::Process)
+    Write-Host "Set environment variable: $name=$value" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+}
+
+function pkill([string]$name) {
+    # Kill processes by name
+    Get-Process $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+}
+
+function pgrep([string]$name) {
+    # List processes by name
+    Get-Process $name -ErrorAction SilentlyContinue | Format-Table Name, Id, CPU, WorkingSet
+}
+
+function k9([string]$name) {
+    # Quick Stop-Process helper (force kill)
+    Get-Process $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+}
+
+function uptime {
+    # Show system uptime
+    $os = Get-CimInstance -ClassName Win32_OperatingSystem
+    $uptime = (Get-Date) - $os.LastBootUpTime
+    Write-Host "System uptime: $($uptime.Days) days, $($uptime.Hours) hours, $($uptime.Minutes) minutes" -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+}
+
+function sysinfo {
+    # Show computer information
+    $computer = Get-CimInstance -ClassName Win32_ComputerSystem
+    $os = Get-CimInstance -ClassName Win32_OperatingSystem
+    $cpu = Get-CimInstance -ClassName Win32_Processor | Select-Object -First 1
+    
+    Write-Host "System Information:" -ForegroundColor (Get-ProfileColor 'UI' 'HelpTitle')
+    Write-Host "  Computer: $($computer.Name)" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+    Write-Host "  OS: $($os.Caption) $($os.Version)" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+    Write-Host "  CPU: $($cpu.Name)" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+    Write-Host "  RAM: $([math]::Round($computer.TotalPhysicalMemory / 1GB, 2)) GB" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+}
+
+function flushdns {
+    # Clear DNS cache
+    try {
+        Clear-DnsClientCache
+        Write-Host "DNS cache cleared successfully" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+    } catch {
+        # Fallback for older PowerShell versions
+        Start-Process -FilePath "ipconfig" -ArgumentList "/flushdns" -NoNewWindow -Wait
+        Write-Host "DNS cache cleared (using ipconfig)" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+    }
+}
 #endregion
 
 
@@ -651,7 +714,6 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))nf$($PSStyle.Reset)
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))ff$($PSStyle.Reset) <pattern> - Recursively find files matching pattern.
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Get-PubIP$($PSStyle.Reset) - Retrieve public IP address.
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))unzip$($PSStyle.Reset) <file> - Extract a zip file to the current directory.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))hb$($PSStyle.Reset) <file> - Upload file content to hastebin-like service (if available).
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))grep$($PSStyle.Reset) <regex> [dir] - Search files for a regex.
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))sed$($PSStyle.Reset) <file> <find> <replace> - Replace text in a file.
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))export$($PSStyle.Reset) <name> <value> - Set environment variable for session.
@@ -686,6 +748,9 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Utilities$($PSStyle
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))FZF Commands:$($PSStyle.Reset)
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  Ctrl + t$($PSStyle.Reset) - Launch fzf for files.
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  Ctrl + r$($PSStyle.Reset) - Fuzzy search history.
+
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Zoxide:$($PSStyle.Reset)
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  Z$($PSStyle.Reset) - Go to a specific directory.
 
 "@
 
