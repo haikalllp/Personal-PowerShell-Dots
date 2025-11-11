@@ -24,21 +24,12 @@
 # - PSReadLine (usually included with PowerShell)
 #
 # Optional Development Tools:
-# - w64devkit (C/C++ compiler toolchain) - For C/C++ development
 # - Git - For version control utilities
 # - winget - For PowerShell updates
-# - Choco - for dependencies
-#
-# Installation commands for optional dependencies:
-# - Oh My Posh: choco install oh-my-posh
-# - zoxide: choco install zoxide
-# - FZF: choco install fzf
-# - ripgrep: choco install ripgrep
-# - Terminal-Icons: Install-Module -Name Terminal-Icons -Scope CurrentUser
-# - fastfetch: choco install fastfetch
-# - nvim: choco install neovim
+# - Choco - For dependencies
 #
 # Complete Dependencies installation command:
+# Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 # choco install oh-my-posh zoxide fzf ripgrep fastfetch neovim -y
 # Install-Module -Name Terminal-Icons -Repository PSGallery
 #================================================================================
@@ -48,6 +39,55 @@
 $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\scoop\modules"
 $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\Documents\PowerShell\Modules"
 $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\Documents\WindowsPowershell\Modules"
+#endregion
+
+#region Color Configuration
+# Centralized color configuration for PSStyles and PSReadLineOptions
+# Modify colors here to customize your PowerShell experience
+
+$global:ProfileColors = @{
+    # PSReadLine Syntax Highlighting Colors
+    PSReadLine = @{
+        Command = '#87CEEB'       # SkyBlue
+        Parameter = '#98FB98'     # PaleGreen
+        Operator = '#FFB6C1'      # LightPink
+        Variable = '#DDA0DD'      # Plum
+        String = '#FFDAB9'        # PeachPuff
+        Number = '#B0E0E6'        # PowderBlue
+        Type = '#F0E68C'          # Khaki
+        Comment = '#D3D3D3'       # LightGray
+        Keyword = '#8367c7'       # Violet
+        Error = '#FF6347'         # Tomato
+    }
+
+    # UI Colors for various output
+    UI = @{
+        HelpTitle = 'Cyan'
+        HelpSeparator = 'Yellow'
+        HelpCommand = 'BrightMagenta'
+        HelpCategory = 'Yellow'
+        Success = 'Green'
+        Warning = 'Yellow'
+        Error = 'Red'
+        Info = 'Cyan'
+    }
+}
+
+# Helper function to get colors by category and name
+function Get-ProfileColor {
+    param(
+        [string]$Category,
+        [string]$Name
+    )
+    
+    if ($global:ProfileColors.ContainsKey($Category) -and
+        $global:ProfileColors[$Category].ContainsKey($Name)) {
+        return $global:ProfileColors[$Category][$Name]
+    }
+    
+    # Return default color if not found
+    return 'White'
+}
 #endregion
 
 #region Theme and Appearance
@@ -152,7 +192,7 @@ function prompt {
 
         # If fastfetch wasn't available at load time, show the friendly startup message now.
         if (-not $ffCmd) {
-            Write-Host "Use 'Show-Help' to list available functions." -ForegroundColor Cyan
+            Write-Host "Use 'Show-Help' to list available functions." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
         }
     }
 
@@ -169,19 +209,8 @@ if (Test-CommandExists Set-PSReadLineOption) {
         EditMode = 'Windows'
         HistoryNoDuplicates = $true
         HistorySearchCursorMovesToEnd = $true
-        # You can modify the colours here
-        Colors = @{
-            Command = '#87CEEB'       # SkyBlue
-            Parameter = '#98FB98'     # PaleGreen
-            Operator = '#FFB6C1'      # LightPink
-            Variable = '#DDA0DD'      # Plum
-            String = '#FFDAB9'        # PeachPuff
-            Number = '#B0E0E6'        # PowderBlue
-            Type = '#F0E68C'          # Khaki
-            Comment = '#D3D3D3'       # LightGray
-            Keyword = '#8367c7'       # Violet
-            Error = '#FF6347'         # Tomato
-        }
+        # Colors are now centralized in $global:ProfileColors.PSReadLine
+        Colors = $global:ProfileColors.PSReadLine
         PredictionSource = 'History'
         PredictionViewStyle = 'ListView'
         BellStyle = 'None'
@@ -357,19 +386,19 @@ function Ensure-TerminalIcons {
 function Install-TerminalIcons {
     # Install Terminal-Icons module for enhanced file icons
     if (Get-Module -ListAvailable -Name Terminal-Icons) {
-        Write-Host "Terminal-Icons is already installed." -ForegroundColor Yellow
+        Write-Host "Terminal-Icons is already installed." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
         return
     }
     if (-not (Get-Command Install-Module -ErrorAction SilentlyContinue)) {
         Write-Warning "Install-Module not available in this session."
         return
     }
-    Write-Host "Installing Terminal-Icons module for CurrentUser..." -ForegroundColor Cyan
+    Write-Host "Installing Terminal-Icons module for CurrentUser..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
     try {
         Install-Module -Name Terminal-Icons -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop
         Import-Module -Name Terminal-Icons -ErrorAction Stop
         $global:__terminalicons_init = $true
-        Write-Host "Terminal-Icons installed and imported." -ForegroundColor Green
+        Write-Host "Terminal-Icons installed and imported." -ForegroundColor (Get-ProfileColor 'UI' 'Success')
     } catch {
         Write-Warning "Failed to install Terminal-Icons: $($_.Exception.Message)"
     }
@@ -557,10 +586,10 @@ function lazyg {
 function Update-PowerShell {
     # Update PowerShell using available package manager (prefer winget, fallback to choco)
     if (Get-Command winget -ErrorAction SilentlyContinue) {
-        Write-Host "Running winget to upgrade PowerShell..." -ForegroundColor Cyan
+        Write-Host "Running winget to upgrade PowerShell..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
         Start-Process -FilePath winget -ArgumentList "upgrade --id Microsoft.PowerShell -e --accept-source-agreements --accept-package-agreements" -NoNewWindow -Wait
     } elseif (Get-Command choco -ErrorAction SilentlyContinue) {
-        Write-Host "Running choco to upgrade PowerShell..." -ForegroundColor Cyan
+        Write-Host "Running choco to upgrade PowerShell..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
         Start-Process -FilePath choco -ArgumentList "upgrade powershell -y" -NoNewWindow -Wait
     } else {
         Write-Warning "Neither winget nor choco found. Install 'App Installer' from the Microsoft Store or Chocolatey."
@@ -610,53 +639,53 @@ function winutildev {
 function Show-Help {
     # Display comprehensive help for all available profile functions
     $helpText = @"
-$($PSStyle.Foreground.Cyan)PowerShell Profile Help$($PSStyle.Reset)
-$($PSStyle.Foreground.Yellow)=======================$($PSStyle.Reset)
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpTitle'))PowerShell Profile Help$($PSStyle.Reset)
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpSeparator'))=======================$($PSStyle.Reset)
 
-$($PSStyle.Foreground.BrightMagenta)Update-PowerShell$($PSStyle.Reset) - PowerShell updater (winget preferred, choco fallback).
-$($PSStyle.Foreground.BrightMagenta)Edit-Profile (ep)$($PSStyle.Reset) - Opens the current user's profile in the configured editor.
-$($PSStyle.Foreground.BrightMagenta)whereis$($PSStyle.Reset) <command> - Shows locations for the specified command.
-$($PSStyle.Foreground.BrightMagenta)touch$($PSStyle.Reset) <file> - Create or update an empty file.
-$($PSStyle.Foreground.BrightMagenta)nf$($PSStyle.Reset) <name> - Create new file.
-$($PSStyle.Foreground.BrightMagenta)ff$($PSStyle.Reset) <pattern> - Recursively find files matching pattern.
-$($PSStyle.Foreground.BrightMagenta)Get-PubIP$($PSStyle.Reset) - Retrieve public IP address.
-$($PSStyle.Foreground.BrightMagenta)unzip$($PSStyle.Reset) <file> - Extract a zip file to the current directory.
-$($PSStyle.Foreground.BrightMagenta)hb$($PSStyle.Reset) <file> - Upload file content to hastebin-like service (if available).
-$($PSStyle.Foreground.BrightMagenta)grep$($PSStyle.Reset) <regex> [dir] - Search files for a regex.
-$($PSStyle.Foreground.BrightMagenta)sed$($PSStyle.Reset) <file> <find> <replace> - Replace text in a file.
-$($PSStyle.Foreground.BrightMagenta)which$($PSStyle.Reset) <name> - Full path / definition of a command.
-$($PSStyle.Foreground.BrightMagenta)export$($PSStyle.Reset) <name> <value> - Set environment variable for session.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Update-PowerShell$($PSStyle.Reset) - PowerShell updater (winget preferred, choco fallback).
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Edit-Profile (ep)$($PSStyle.Reset) - Opens the current user's profile in the configured editor.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))whereis$($PSStyle.Reset) <command> - Shows locations for the specified command.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))which$($PSStyle.Reset) <name> - Full path / definition of a command.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))touch$($PSStyle.Reset) <file> - Create or update an empty file.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))nf$($PSStyle.Reset) <name> - Create new file.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))ff$($PSStyle.Reset) <pattern> - Recursively find files matching pattern.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Get-PubIP$($PSStyle.Reset) - Retrieve public IP address.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))unzip$($PSStyle.Reset) <file> - Extract a zip file to the current directory.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))hb$($PSStyle.Reset) <file> - Upload file content to hastebin-like service (if available).
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))grep$($PSStyle.Reset) <regex> [dir] - Search files for a regex.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))sed$($PSStyle.Reset) <file> <find> <replace> - Replace text in a file.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))export$($PSStyle.Reset) <name> <value> - Set environment variable for session.
 
-$($PSStyle.Foreground.BrightMagenta)Navigation & Files$($PSStyle.Reset)
-  $($PSStyle.Foreground.Yellow)mkcd$($PSStyle.Reset) - Make directory and cd into it.
-  $($PSStyle.Foreground.Yellow)docs$($PSStyle.Reset) - Go to Documents.
-  $($PSStyle.Foreground.Yellow)dtop$($PSStyle.Reset) - Go to Desktop.
-  $($PSStyle.Foreground.Yellow)la$($PSStyle.Reset) - List files including hidden.
-  $($PSStyle.Foreground.Yellow)ll$($PSStyle.Reset) - List hidden files.
-  $($PSStyle.Foreground.Yellow)ls$($PSStyle.Reset) - List files.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Navigation & Files$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))mkcd$($PSStyle.Reset) - Make directory and cd into it.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))docs$($PSStyle.Reset) - Go to Documents.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))dtop$($PSStyle.Reset) - Go to Desktop.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))la$($PSStyle.Reset) - List files including hidden.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ll$($PSStyle.Reset) - List hidden files.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ls$($PSStyle.Reset) - List files.
 
-$($PSStyle.Foreground.BrightMagenta)Process & System$($PSStyle.Reset)
-  $($PSStyle.Foreground.Yellow)pkill$($PSStyle.Reset) <name> - Kill processes by name.
-  $($PSStyle.Foreground.Yellow)pgrep$($PSStyle.Reset) <name> - List processes by name.
-  $($PSStyle.Foreground.Yellow)k9$($PSStyle.Reset) <name> - Quick Stop-Process helper.
-  $($PSStyle.Foreground.Yellow)uptime$($PSStyle.Reset) - Show system uptime.
-  $($PSStyle.Foreground.Yellow)sysinfo$($PSStyle.Reset) - Show computer info.
-  $($PSStyle.Foreground.Yellow)flushdns$($PSStyle.Reset) - Clear DNS cache.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Process & System$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pkill$($PSStyle.Reset) <name> - Kill processes by name.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pgrep$($PSStyle.Reset) <name> - List processes by name.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))k9$($PSStyle.Reset) <name> - Quick Stop-Process helper.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))uptime$($PSStyle.Reset) - Show system uptime.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))sysinfo$($PSStyle.Reset) - Show computer info.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))flushdns$($PSStyle.Reset) - Clear DNS cache.
 
-$($PSStyle.Foreground.BrightMagenta)Git short-cuts$($PSStyle.Reset)
-  $($PSStyle.Foreground.Yellow)gs$($PSStyle.Reset) - git status.
-  $($PSStyle.Foreground.Yellow)ga$($PSStyle.Reset) - git add .
-  $($PSStyle.Foreground.Yellow)gp$($PSStyle.Reset) - git push.
-  $($PSStyle.Foreground.Yellow)gcl$($PSStyle.Reset) - git clone.
-  $($PSStyle.Foreground.Yellow)gcom$($PSStyle.Reset) - add + commit with message.
-  $($PSStyle.Foreground.Yellow)lazyg$($PSStyle.Reset) - add + commit + push.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Git short-cuts$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gs$($PSStyle.Reset) - git status.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ga$($PSStyle.Reset) - git add .
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gp$($PSStyle.Reset) - git push.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gcl$($PSStyle.Reset) - git clone.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gcom$($PSStyle.Reset) - add + commit with message.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))lazyg$($PSStyle.Reset) - add + commit + push.
 
-$($PSStyle.Foreground.BrightMagenta)Utilities$($PSStyle.Reset)
-  $($PSStyle.Foreground.Yellow)$($PSStyle.Foreground.Yellow)winutil$($PSStyle.Reset), $($PSStyle.Foreground.Yellow)winutildev$($PSStyle.Reset).
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Utilities$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))winutil$($PSStyle.Reset), $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))winutildev$($PSStyle.Reset).
 
-$($PSStyle.Foreground.BrightMagenta)FZF Commands:$($PSStyle.Reset)
-$($PSStyle.Foreground.Yellow)  Ctrl + t$($PSStyle.Reset) - Launch fzf for files.
-$($PSStyle.Foreground.Yellow)  Ctrl + r$($PSStyle.Reset) - Fuzzy search history.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))FZF Commands:$($PSStyle.Reset)
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  Ctrl + t$($PSStyle.Reset) - Launch fzf for files.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  Ctrl + r$($PSStyle.Reset) - Fuzzy search history.
 
 "@
 
@@ -684,4 +713,4 @@ if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
 $PSStyle.OutputRendering = 'Host'
 
 # Friendly startup message
-Write-Host "Use 'Show-Help' to list available functions." -ForegroundColor Cyan
+Write-Host "Use 'Show-Help' to list available functions." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
