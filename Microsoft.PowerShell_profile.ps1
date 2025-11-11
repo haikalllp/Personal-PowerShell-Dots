@@ -20,7 +20,7 @@
 # - Visual Studio Code - Default fallback editor
 #
 # Required Dependencies:
-# - PowerShell 5.1+ or PowerShell 7+
+# - PowerShell 7+
 # - PSReadLine (usually included with PowerShell)
 #
 # Optional Development Tools:
@@ -43,7 +43,7 @@ $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\Documents\WindowsPowersh
 
 #region Color Configuration
 # Centralized color configuration for PSStyles and PSReadLineOptions
-# Modify colors here to customize your PowerShell experience
+# Modify colors here
 
 $global:ProfileColors = @{
     # PSReadLine Syntax Highlighting Colors
@@ -705,52 +705,65 @@ function Show-Help {
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpTitle'))PowerShell Profile Help$($PSStyle.Reset)
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpSeparator'))=======================$($PSStyle.Reset)
 
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Update-PowerShell$($PSStyle.Reset) - PowerShell updater (winget preferred, choco fallback).
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Edit-Profile (ep)$($PSStyle.Reset) - Opens the current user's profile in the configured editor.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))whereis$($PSStyle.Reset) <command> - Shows locations for the specified command.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))which$($PSStyle.Reset) <name> - Full path / definition of a command.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))touch$($PSStyle.Reset) <file> - Create or update an empty file.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))nf$($PSStyle.Reset) <name> - Create new file.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))ff$($PSStyle.Reset) <pattern> - Recursively find files matching pattern.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Get-PubIP$($PSStyle.Reset) - Retrieve public IP address.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))unzip$($PSStyle.Reset) <file> - Extract a zip file to the current directory.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))grep$($PSStyle.Reset) <regex> [dir] - Search files for a regex.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))sed$($PSStyle.Reset) <file> <find> <replace> - Replace text in a file.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))export$($PSStyle.Reset) <name> <value> - Set environment variable for session.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))FILE & DIRECTORY OPERATIONS$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))touch$($PSStyle.Reset) <file>     - Create or update an empty file
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))nf$($PSStyle.Reset) <name>       - Create new file in current directory
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ff$($PSStyle.Reset) <pattern>    - Recursively find files matching pattern
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))unzip$($PSStyle.Reset) <file>     - Extract zip file to current directory
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))head$($PSStyle.Reset) <file> [n]  - Show first n lines of file (default: 10)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))tail$($PSStyle.Reset) <file> [n]  - Show last n lines of file (default: 10)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))grep$($PSStyle.Reset) <regex> [dir] - Search files for regex pattern
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))sed$($PSStyle.Reset) <file> <find> <replace> - Replace text in file
 
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Navigation & Files$($PSStyle.Reset)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))mkcd$($PSStyle.Reset) - Make directory and cd into it.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))docs$($PSStyle.Reset) - Go to Documents.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))dtop$($PSStyle.Reset) - Go to Desktop.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))la$($PSStyle.Reset) - List files including hidden.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ll$($PSStyle.Reset) - List hidden files.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ls$($PSStyle.Reset) - List files.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))NAVIGATION$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))mkcd$($PSStyle.Reset) <dir>       - Create directory and change to it
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))docs$($PSStyle.Reset)              - Navigate to Documents folder
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))dtop$($PSStyle.Reset)             - Navigate to Desktop folder
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))la$($PSStyle.Reset)                - List all files including hidden
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ll$($PSStyle.Reset)                - List hidden files only
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ls$($PSStyle.Reset) [args]       - List files with Terminal-Icons support
 
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Process & System$($PSStyle.Reset)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pkill$($PSStyle.Reset) <name> - Kill processes by name.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pgrep$($PSStyle.Reset) <name> - List processes by name.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))k9$($PSStyle.Reset) <name> - Quick Stop-Process helper.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))uptime$($PSStyle.Reset) - Show system uptime.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))sysinfo$($PSStyle.Reset) - Show computer info.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))flushdns$($PSStyle.Reset) - Clear DNS cache.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SYSTEM UTILITIES$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))sysinfo$($PSStyle.Reset)           - Display comprehensive system information
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))uptime$($PSStyle.Reset)            - Show system uptime
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))flushdns$($PSStyle.Reset)          - Clear DNS cache
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pkill$($PSStyle.Reset) <name>       - Kill processes by name
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pgrep$($PSStyle.Reset) <name>       - List processes by name with details
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))k9$($PSStyle.Reset) <name>         - Quick force-kill process
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))export$($PSStyle.Reset) <name> <value> - Set environment variable for session
 
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Git short-cuts$($PSStyle.Reset)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gs$($PSStyle.Reset) - git status.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ga$($PSStyle.Reset) - git add .
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gp$($PSStyle.Reset) - git push.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gcl$($PSStyle.Reset) - git clone.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gcom$($PSStyle.Reset) - add + commit with message.
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))lazyg$($PSStyle.Reset) - add + commit + push.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))TOOLS$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Get-PubIP$($PSStyle.Reset)        - Retrieve public IP address
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))which$($PSStyle.Reset) <name>       - Show full path of command
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))whereis$($PSStyle.Reset) <command>   - Show all locations where command is found
 
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Utilities$($PSStyle.Reset)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))winutil$($PSStyle.Reset), $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))winutildev$($PSStyle.Reset).
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))CLIPBOARD$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))cpy$($PSStyle.Reset) <text>         - Copy text to clipboard
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pst$($PSStyle.Reset)                - Paste text from clipboard
 
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))FZF Commands:$($PSStyle.Reset)
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  Ctrl + t$($PSStyle.Reset) - Launch fzf for files.
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  Ctrl + r$($PSStyle.Reset) - Fuzzy search history.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))GIT SHORTCUTS$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gs$($PSStyle.Reset)                 - git status
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ga$($PSStyle.Reset)                 - git add .
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gp$($PSStyle.Reset)                 - git push
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gcl$($PSStyle.Reset) <url>         - git clone repository
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))gcom$($PSStyle.Reset) <message>     - git add + commit with message
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))lazyg$($PSStyle.Reset) <message>     - git add + commit + push
 
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))Zoxide:$($PSStyle.Reset)
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  Z$($PSStyle.Reset) - Go to a specific directory.
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))PROFILE MANAGEMENT$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Edit-Profile$($PSStyle.Reset) (ep)   - Open profile in configured editor
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Update-PowerShell$($PSStyle.Reset) - Update PowerShell (winget/choco)
+
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SYSTEM TOOLS$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))winutil$($PSStyle.Reset)             - Run WinUtil full-release script
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))winutildev$($PSStyle.Reset)          - Run WinUtil pre-release script
+
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))FUZZY FINDER (FZF)$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Ctrl + t$($PSStyle.Reset)            - Launch fzf for file selection
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Ctrl + r$($PSStyle.Reset)            - Fuzzy search command history
+
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (ZOXIDE)$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Z$($PSStyle.Reset)                     - Smart directory navigation
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))zi$($PSStyle.Reset)                    - Interactive directory selection
 
 "@
 
