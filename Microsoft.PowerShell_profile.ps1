@@ -35,6 +35,9 @@
 #================================================================================
 
 #region Environment Setup
+# Set execution policy to allow running scripts
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+
 # Configure module paths
 $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\scoop\modules"
 $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\Documents\PowerShell\Modules"
