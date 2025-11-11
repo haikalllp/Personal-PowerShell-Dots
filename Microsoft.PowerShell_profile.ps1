@@ -905,8 +905,17 @@ try {
 Clear-Host
 
 # Force Fastfetch to use YOUR config every time (bypass path confusion)
+# Only run if window size is sufficient (minimum 80x24)
 if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
-    fastfetch -c "$env:USERPROFILE\.config\fastfetch\config.jsonc"
+    try {
+        $windowSize = $Host.UI.RawUI.WindowSize
+        if ($windowSize.Width -ge 80 -and $windowSize.Height -ge 24) {
+            fastfetch -c "$env:USERPROFILE\.config\fastfetch\config.jsonc"
+        }
+    } catch {
+        # Fallback if window size detection fails
+        fastfetch -c "$env:USERPROFILE\.config\fastfetch\config.jsonc"
+    }
 }
 
 $PSStyle.OutputRendering = 'Host'
