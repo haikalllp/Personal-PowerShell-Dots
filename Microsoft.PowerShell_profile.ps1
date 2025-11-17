@@ -17,6 +17,8 @@
 # - Terminal-Icons (PowerShell module) - File icons for enhanced ls output
 # - fastfetch (https://github.com/fastfetch-cli/fastfetch) - System info display
 # - nvim (https://neovim.io/) - Preferred editor for profile editing
+# - pywal/winwal (https://github.com/scaryrawr/winwal) - Dynamic terminal theming
+# - ImageMagick (https://imagemagick.org/) - Image processing for pywal
 # - Visual Studio Code - Default fallback editor
 #
 # Required Dependencies:
@@ -27,14 +29,18 @@
 # - Git - For version control utilities
 # - winget - For PowerShell updates
 # - Choco - For dependencies
+# - pip - For pywal installation
 #
 # Complete Dependencies installation command:
 # Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 # choco install oh-my-posh zoxide fzf ripgrep fastfetch neovim -y
+# git clone https://github.com/scaryrawr/winwal "$env:USERPROFILE\Documents\PowerShell\Modules\winwal"
+# winget install Python.Python.3.11
+# pip install pywal
+# winget install imagemagick.imagemagick
 # Install-Module -Name Terminal-Icons -Repository PSGallery
 #================================================================================
 
-#region Environment Setup
 # Set execution policy to allow running scripts
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 
@@ -43,6 +49,12 @@ $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\scoop\modules"
 $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\Documents\PowerShell\Modules"
 $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\Documents\WindowsPowershell\Modules"
 #endregion
+
+# Winwall module / pywall for windows:
+# Make sure pywal and imagemagick are installed
+# pip install pywal
+# winget install imagemagick.imagemagick
+Import-Module winwal\winwal.psm1
 
 #region Color Configuration
 # Centralized color configuration for PSStyles and PSReadLineOptions
@@ -120,8 +132,13 @@ function Test-OhMyPoshInstalled {
 
 # Oh My Posh configuration - prefer local theme, fallback to remote
 # You can change your oh-my-posh themes here
-$ompLocal   = Join-Path $env:USERPROFILE "Documents\PowerShell\Themes\1_shell.json"
+
+# For local themes can be any custom theme in any path. Here we use the cached wal theme if available.
+$ompLocal   = Join-Path $env:USERPROFILE ".cache\wal\posh-wal-atomic.omp.json"
+
+# Fallback to normal remote theme if local custom theme not found
 $ompRemote  = "https://github.com/JanDeDobbeleer/oh-my-posh/blob/main/themes/1_shell.omp.json"
+
 $ompConfig  = if (Test-Path $ompLocal) { $ompLocal } else { $ompRemote }
 
 # Lazy initialize Oh My Posh to keep shell startup fast
@@ -817,6 +834,43 @@ function flushdns {
         Write-Host "DNS cache cleared (using ipconfig)" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
     }
 }
+#region Theme Utilities
+# Functions to update terminal themes with pywal/winwal
+
+function update-colour {
+    param(
+        [Parameter(Position=0)]
+        [ValidateSet("haishoku", "colorz", "colorthief")]
+        [string]$Backend
+    )
+    
+    # Update terminal colors using pywal/winwal with specified backend and refresh Oh My Posh
+    try {
+        if ($Backend) {
+            Write-Host "Updating terminal colors with $Backend backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            Update-WalTheme -Backend $Backend
+        } else {
+            Write-Host "Updating terminal colors..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            Update-WalTheme
+        }
+        Write-Host "Terminal colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+        
+        # Reinitialize Oh My Posh to apply the new color scheme
+        if (Test-OhMyPoshInstalled) {
+            Write-Host "Refreshing Oh My Posh theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            # Reset the initialization flag to force reinitialization
+            $global:__omp_init_done = $false
+            # Reinitialize Oh My Posh with the new theme
+            Initialize-OhMyPosh
+            Write-Host "Oh My Posh theme refreshed!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+        } else {
+            Write-Host "Oh My Posh not found, skipping theme refresh." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
+        }
+    } catch {
+        Write-Warning "Failed to update terminal colors: $($_.Exception.Message)"
+    }
+}
+
 #endregion
 
 
@@ -889,6 +943,11 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (Z
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Z$($PSStyle.Reset)                     - Smart directory navigation
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))zi$($PSStyle.Reset)                    - Interactive directory selection
 
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))THEME UTILITIES$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colour$($PSStyle.Reset) [backend] - Update terminal colors and refresh Oh My Posh theme
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) no argument: normal Update-WalTheme
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) backends: haishoku, colorz, colorthief
+
 "@
 
     Write-Host $helpText
@@ -923,5 +982,5 @@ if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
 
 $PSStyle.OutputRendering = 'Host'
 
-# Friendly startup message
+# Startup message
 Write-Host "Use 'Show-Help' to list available functions." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
