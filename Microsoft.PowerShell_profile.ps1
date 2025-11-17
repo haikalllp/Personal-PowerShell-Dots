@@ -94,12 +94,12 @@ function Get-ProfileColor {
         [string]$Category,
         [string]$Name
     )
-    
+
     if ($global:ProfileColors.ContainsKey($Category) -and
         $global:ProfileColors[$Category].ContainsKey($Name)) {
         return $global:ProfileColors[$Category][$Name]
     }
-    
+
     # Return default color if not found
     return 'White'
 }
@@ -818,7 +818,7 @@ function update-colours {
         [ValidateSet("haishoku", "colorz", "colorthief")]
         [string]$Backend
     )
-    
+
     # Update terminal colors using pywal/winwal with specified backend and refresh Oh My Posh
     try {
         if ($Backend) {
@@ -829,7 +829,7 @@ function update-colours {
             Update-WalTheme
         }
         Write-Host "Terminal colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
-        
+
         # Reinitialize Oh My Posh to apply the new color scheme
         if (Test-OhMyPoshInstalled) {
             Write-Host "Refreshing Oh My Posh theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
@@ -841,7 +841,7 @@ function update-colours {
         } else {
             Write-Host "Oh My Posh not found, skipping theme refresh." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
         }
-        
+
         # Sync Discord theme with the new color palette
         try {
             Write-Host "Syncing Discord theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
@@ -849,6 +849,15 @@ function update-colours {
             Write-Host "Discord theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
         } catch {
             Write-Warning "Failed to sync Discord theme: $($_.Exception.Message)"
+        }
+
+        # Reload yasb
+        try {
+            Write-Host "Reloading Yasb..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            & yasbc reload
+            Write-Host "Yasb reloaded successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+        } catch {
+            Write-Warning "Failed to reload Yasb: $($_.Exception.Message)"
         }
     } catch {
         Write-Warning "Failed to update terminal colors: $($_.Exception.Message)"
