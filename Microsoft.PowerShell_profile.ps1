@@ -50,11 +50,11 @@ $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\Documents\PowerShell\Mod
 $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\Documents\WindowsPowershell\Modules"
 #endregion
 
-# Winwall module / pywall for windows:
+# Winwal module / pywal for windows:
 # Make sure pywal and imagemagick are installed
-# pip install pywal
+# pip install pywal colorthief colorz haishoku
 # winget install imagemagick.imagemagick
-Import-Module winwal\winwal.psm1
+Import-Module winwal
 
 #region Color Configuration
 # Centralized color configuration for PSStyles and PSReadLineOptions
@@ -420,31 +420,6 @@ if (Get-Command fzf -ErrorAction SilentlyContinue) {
             } catch {}
         }
     }
-
-    # FZF Helper Functions
-    function fzf-find {
-        # Launch FZF for interactive file searching
-        & fzf --height 40% --reverse --border
-    }
-
-    function fzf-cd {
-        # Fuzzy directory selection and navigation
-        $dir = Get-ChildItem -Directory -Recurse -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName | fzf --height 40% --reverse --border
-        if ($dir) { Set-Location $dir.Trim() }
-    }
-
-    function fzf-history {
-        # Fuzzy search through command history
-        $historyPath = (Get-PSReadLineOption).HistorySavePath
-        if (Test-Path $historyPath) {
-            Get-Content $historyPath -ErrorAction SilentlyContinue | Where-Object { $_ -ne "" } | fzf --height 40% --reverse --border
-        }
-    }
-
-    # Create aliases for FZF functions
-    Set-Alias -Name fzf-find -Value fzf-find
-    Set-Alias -Name fzf-cd -Value fzf-cd
-    Set-Alias -Name fzf-history -Value fzf-history
 }
 #endregion
 
@@ -837,7 +812,7 @@ function flushdns {
 #region Theme Utilities
 # Functions to update terminal themes with pywal/winwal
 
-function update-colour {
+function update-colours {
     param(
         [Parameter(Position=0)]
         [ValidateSet("haishoku", "colorz", "colorthief")]
@@ -865,6 +840,15 @@ function update-colour {
             Write-Host "Oh My Posh theme refreshed!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
         } else {
             Write-Host "Oh My Posh not found, skipping theme refresh." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
+        }
+        
+        # Sync Discord theme with the new color palette
+        try {
+            Write-Host "Syncing Discord theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            & "$PSScriptRoot\Scripts\sync_discord.ps1"
+            Write-Host "Discord theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+        } catch {
+            Write-Warning "Failed to sync Discord theme: $($_.Exception.Message)"
         }
     } catch {
         Write-Warning "Failed to update terminal colors: $($_.Exception.Message)"
@@ -944,7 +928,7 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (Z
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))zi$($PSStyle.Reset)                    - Interactive directory selection
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))THEME UTILITIES$($PSStyle.Reset)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colour$($PSStyle.Reset) [backend] - Update terminal colors and refresh Oh My Posh theme
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colours$($PSStyle.Reset) [backend] - Update terminal colors and refresh Oh My Posh theme
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) no argument: normal Update-WalTheme
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) backends: haishoku, colorz, colorthief
 
