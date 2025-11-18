@@ -9,7 +9,9 @@
 #================================================================================
 # This profile requires the following external dependencies:
 #
-# Optional Dependencies (auto-detected, graceful degradation if missing):
+# Required Dependencies:
+# - PowerShell 7+
+# - PSReadLine (usually included with PowerShell)
 # - Oh My Posh (https://ohmyposh.dev/) - Theme engine for enhanced prompt
 # - zoxide (https://github.com/ajeetdsouza/zoxide) - Smart directory navigation
 # - FZF (https://github.com/junegunn/fzf) - Fuzzy finder for files/history
@@ -21,60 +23,64 @@
 # - ImageMagick (https://imagemagick.org/) - Image processing for pywal
 # - Visual Studio Code - Default fallback editor
 #
-# Required Dependencies:
-# - PowerShell 7+
-# - PSReadLine (usually included with PowerShell)
-#
-# Optional Development Tools:
-# - Git - For version control utilities
+# Required Development Tools:
 # - winget - For PowerShell updates
 # - Choco - For dependencies
-# - pip - For pywal installation
+# - pip - For pip dependent packages
 #
-# Complete Dependencies installation command:
+# Complete Required Dependencies installation commands:
 # Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 # choco install oh-my-posh zoxide fzf ripgrep fastfetch neovim -y
-# git clone https://github.com/scaryrawr/winwal "$env:USERPROFILE\Documents\PowerShell\Modules\winwal"
-# winget install Python.Python.3.11
-# pip install pywal
+# git clone https://github.com/scaryrawr/winwal "$HOME\Documents\PowerShell\Modules\winwal"
+# rm -Path "$HOME\Documents\PowerShell\Modules\winwal\.git" -r -fo
 # winget install imagemagick.imagemagick
+# winget install Python.Python.3.13
+# pip install pywal colorthief colorz haishoku
 # Install-Module -Name Terminal-Icons -Repository PSGallery
+#
+#================================================================================
+# Optional Dependencies:
+# - GlazewM (https://github.com/glzr-io/glazewm) - Window tiling manager
+# - Komorebi (https://github.com/LGUG2Z/komorebi) - Alternative window tiling manager
+# - Yasb (https://github.com/amnweb/yasb) - Windows Top Status bar
+# - BetterDiscord (https://betterdiscord.app/) - Themed Discord client
+# - Pywalfox (https://github.com/Frewacom/pywalfox) - Firefox theme sync with pywal
 #================================================================================
 
-# Set execution policy to allow running scripts
-Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 
-# Configure module paths
-$env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\scoop\modules"
-$env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\Documents\PowerShell\Modules"
-$env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\Documents\WindowsPowershell\Modules"
-#endregion
-
-# Winwal module / pywal for windows:
-# Make sure pywal and imagemagick are installed
-# pip install pywal colorthief colorz haishoku
-# winget install imagemagick.imagemagick
-Import-Module winwal
-
+#region User Configurations
+#================================================================================
+# All user-configurable settings:
 
 # Window Tiling Manager Configuration
-#================================================================================
 # Valid values: "komorebi", "glazewm", "none"
 # Only one should be active at a time
 $global:WindowTilingManager = "glazewm"
 
 # Optional Theme Sync Configuration
-#================================================================================
 # Set to $true if you have the corresponding application installed and want theme sync
 $global:UseYasb = $true            # Set to $true if using Yasb
 $global:UseBetterDiscord = $true   # Set to $true if using BetterDiscord
 $global:UsePywalfox = $true        # Set to $true if using Pywalfox
-#endregion
 
-#region Color Configuration
+
+#=================================================================================
+# Oh My Posh Theme Mode Configuration
+# Valid values: "local" (use local if exists, else remote with warning), "remote" (always use remote)
+$global:OhMyPoshThemeMode = "local"
+
+# For local themes can be any custom theme in any path. Here we use cached wal theme if available.
+# You can generate a pywal oh-my-posh theme with winwal:
+# Update-WalTheme; . $PROFILE
+$ompLocal   = Join-Path $HOME ".cache\wal\posh-wal-atomic.omp.json"
+
+# Fallback to normal remote theme if local custom theme not found (using raw URL)
+$ompRemote  = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/1_shell.omp.json"
+
+
+#=================================================================================
 # Centralized colour configuration for PSStyles and PSReadLineOptions
-# Modify colors here
-
+# Modify PSReadLine colors here
 $global:ProfileColors = @{
     # PSReadLine Syntax Highlighting Colors
     PSReadLine = @{
@@ -102,6 +108,98 @@ $global:ProfileColors = @{
         Info = 'Cyan'
     }
 }
+#================================================================================
+#endregion
+
+
+# ================================================================================
+# Core Functions
+# ================================================================================
+# DO NOT TOUCH BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING
+# ================================================================================
+
+# Set all module paths
+$psModulesPath = Join-Path $HOME "Documents\PowerShell\Modules"
+$winPSModulesPath = Join-Path $HOME "Documents\WindowsPowerShell\Modules"
+$scoopModulesPath = Join-Path $HOME "scoop\modules"
+
+# Add to PSModulePath if not already present
+$currentModulePath = $env:PSModulePath -split ';'
+if ($scoopModulesPath -notin $currentModulePath) {
+    $env:PSModulePath = "$env:PSModulePath;$scoopModulesPath"
+}
+if ($psModulesPath -notin $currentModulePath) {
+    $env:PSModulePath = "$env:PSModulePath;$psModulesPath"
+}
+if ($winPSModulesPath -notin $currentModulePath) {
+    $env:PSModulePath = "$env:PSModulePath;$winPSModulesPath"
+}
+
+# Helper function to test if a command exists
+function Test-CommandExists {
+    param([string]$Command)
+    try {
+        Get-Command $Command -ErrorAction Stop | Out-Null
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
+
+# Define fastfetch command for consistent usage throughout the profile
+# Check if fastfetch is available and use the same reference everywhere
+$global:fastfetch = if (Test-CommandExists fastfetch) { 'fastfetch' } else { $null }
+
+# Validate required dependencies and provide clear error messages
+function Validate-Dependencies {
+    $requiredCommands = @(
+        'oh-my-posh', 'zoxide', 'fzf', 'rg', 'fastfetch', 'nvim'
+    )
+    $requiredModules = @(
+        'Terminal-Icons', 'winwal'
+    )
+
+    $missingCommands = @()
+    $missingModules = @()
+
+    foreach ($cmd in $requiredCommands) {
+        if (-not (Test-CommandExists $cmd)) {
+            $missingCommands += $cmd
+        }
+    }
+
+    foreach ($module in $requiredModules) {
+        if (-not (Get-Module -ListAvailable -Name $module)) {
+            $missingModules += $module
+        }
+    }
+
+    if ($missingCommands.Count -gt 0 -or $missingModules.Count -gt 0) {
+        Write-Host "Missing required dependencies:" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        if ($missingCommands.Count -gt 0) {
+            Write-Host "  Commands: $($missingCommands -join ', ')" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        }
+        if ($missingModules.Count -gt 0) {
+            Write-Host "  Modules: $($missingModules -join ', ')" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        }
+        Write-Host "Please install missing dependencies for full functionality." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
+    }
+}
+
+# Run dependency validation
+Validate-Dependencies
+
+# Import winwal module with error handling
+try {
+    Import-Module winwal -ErrorAction Stop
+} catch {
+    Write-Warning "Failed to import winwal module: $($_.Exception.Message)"
+    Write-Host "Please ensure winwal is installed: git clone https://github.com/scaryrawr/winwal `"$($HOME)\Documents\PowerShell\Modules\winwal`"" -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+}
+
+#region Helper Functions
+#================================================================================
 
 # Helper function to get colors by category and name
 function Get-ProfileColor {
@@ -121,10 +219,20 @@ function Get-ProfileColor {
 #endregion
 
 #region Theme and Appearance
-# Test if a command exists in the current environment
-function Test-CommandExists {
-    param($command)
-    $null -ne (Get-Command $command -ErrorAction SilentlyContinue)
+
+# Set Oh My Posh configuration based on user preference
+if ($global:OhMyPoshThemeMode -eq 'remote') {
+    $ompConfig = $ompRemote
+} elseif ($global:OhMyPoshThemeMode -eq 'local') {
+    if ($ompLocal -and (Test-Path -LiteralPath $ompLocal)) {
+        $ompConfig = $ompLocal
+    } else {
+        Write-Warning "Oh My Posh local theme not found at '$ompLocal'. Consider switching to 'remote' mode."
+        $ompConfig = $ompRemote
+    }
+} else {
+    Write-Warning "Invalid OhMyPoshThemeMode '$global:OhMyPoshThemeMode'. Defaulting to remote."
+    $ompConfig = $ompRemote
 }
 
 # Test if Oh My Posh is installed from various sources
@@ -144,17 +252,6 @@ function Test-OhMyPoshInstalled {
         return $false
     }
 }
-
-# Oh My Posh configuration - prefer local theme, fallback to remote
-# You can change your oh-my-posh themes here
-
-# For local themes can be any custom theme in any path. Here we use the cached wal theme if available.
-$ompLocal   = Join-Path $env:USERPROFILE ".cache\wal\posh-wal-atomic.omp.json"
-
-# Fallback to normal remote theme if local custom theme not found
-$ompRemote  = "https://github.com/JanDeDobbeleer/oh-my-posh/blob/main/themes/1_shell.omp.json"
-
-$ompConfig  = if (Test-Path $ompLocal) { $ompLocal } else { $ompRemote }
 
 # Lazy initialize Oh My Posh to keep shell startup fast
 $global:__omp_init_done = $false
@@ -177,9 +274,10 @@ function Initialize-OhMyPosh {
 #endregion
 
 #region Command Line Tools
+
 # Zoxide Directory Jumper Configuration
 # Initialize zoxide for smart directory navigation and aliases
-if (Get-Command zoxide -ErrorAction SilentlyContinue) {
+if (Test-CommandExists zoxide) {
     try {
         # =============================================================================
         #
@@ -347,7 +445,7 @@ function prompt {
         }
 
         # If fastfetch wasn't available at load time, show the friendly startup message now.
-        if (-not $ffCmd) {
+        if (-not $fastfetch) {
             Write-Host "Use 'Show-Help' to list available functions." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
         }
     }
@@ -373,8 +471,17 @@ if (Test-CommandExists Set-PSReadLineOption) {
     }
     Set-PSReadLineOption @PSReadLineOptions
 
-    # Additional options for enhanced functionality
-    Set-PSReadLineOption -PredictionSource HistoryAndPlugin -MaximumHistoryCount 10000
+    # Additional options for enhanced functionality (with version compatibility check)
+    try {
+        Set-PSReadLineOption -PredictionSource HistoryAndPlugin -MaximumHistoryCount 10000
+    } catch {
+        # Fallback for older PowerShell versions that don't support PredictionSource
+        try {
+            Set-PSReadLineOption -MaximumHistoryCount 10000
+        } catch {
+            Write-Verbose "PSReadLine configuration not fully supported on this PowerShell version"
+        }
+    }
 
     # Key handlers for improved navigation and editing
     Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
@@ -400,9 +507,9 @@ if (Test-CommandExists Set-PSReadLineOption) {
 
 #region FZF (Fuzzy Finder) Integration
 # Initialize FZF with PowerShell integration for fuzzy searching files, directories, and history
-if (Get-Command fzf -ErrorAction SilentlyContinue) {
+if (Test-CommandExists fzf) {
     # Configure FZF default command - prefer ripgrep for speed, fallback to Get-ChildItem
-    if (Get-Command rg -ErrorAction SilentlyContinue) {
+    if (Test-CommandExists rg) {
         # Use PowerShell single-quoted string so double quotes reach rg on Windows
         $env:FZF_DEFAULT_COMMAND = 'rg --files --hidden --follow --glob "!.git/**" --glob "!node_modules/**"'
     } else {
@@ -410,7 +517,7 @@ if (Get-Command fzf -ErrorAction SilentlyContinue) {
     }
 
     # PSReadLine integration for FZF
-    if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
+    if (Test-CommandExists Set-PSReadLineKeyHandler) {
         # Ctrl+T: Fuzzy file search and insert path
         Set-PSReadLineKeyHandler -Key Ctrl+t -ScriptBlock {
             try {
@@ -716,10 +823,10 @@ function lazyg {
 
 function Update-PowerShell {
     # Update PowerShell using available package manager (prefer winget, fallback to choco)
-    if (Get-Command winget -ErrorAction SilentlyContinue) {
+    if (Test-CommandExists winget) {
         Write-Host "Running winget to upgrade PowerShell..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
         Start-Process -FilePath winget -ArgumentList "upgrade --id Microsoft.PowerShell -e --accept-source-agreements --accept-package-agreements" -NoNewWindow -Wait
-    } elseif (Get-Command choco -ErrorAction SilentlyContinue) {
+    } elseif (Test-CommandExists choco) {
         Write-Host "Running choco to upgrade PowerShell..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
         Start-Process -FilePath choco -ArgumentList "upgrade powershell -y" -NoNewWindow -Wait
     } else {
@@ -743,9 +850,9 @@ function Edit-Profile {
     }
 
     # Prefer nvim if present
-    if (Get-Command nvim -ErrorAction SilentlyContinue) {
+    if (Test-CommandExists nvim) {
         & nvim $profilePath
-    } elseif (Get-Command nvim.exe -ErrorAction SilentlyContinue) {
+    } elseif (Test-CommandExists nvim.exe) {
         & nvim.exe $profilePath
     } else {
         & $EDITOR $profilePath
@@ -788,10 +895,6 @@ function pgrep([string]$name) {
     Get-Process $name -ErrorAction SilentlyContinue | Format-Table Name, Id, CPU, WorkingSet
 }
 
-function k9([string]$name) {
-    # Quick Stop-Process helper (force kill)
-    Get-Process $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-}
 
 function uptime {
     # Show system uptime
@@ -805,7 +908,7 @@ function sysinfo {
     $computer = Get-CimInstance -ClassName Win32_ComputerSystem
     $os = Get-CimInstance -ClassName Win32_OperatingSystem
     $cpu = Get-CimInstance -ClassName Win32_Processor | Select-Object -First 1
-    
+
     Write-Host "System Information:" -ForegroundColor (Get-ProfileColor 'UI' 'HelpTitle')
     Write-Host "  Computer: $($computer.Name)" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
     Write-Host "  OS: $($os.Caption) $($os.Version)" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
@@ -890,7 +993,8 @@ function update-colours {
         if ($global:UseBetterDiscord) {
             try {
                 Write-Host "Syncing Discord theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-                & "$PSScriptRoot\Scripts\sync_discord.ps1"
+                $discordScript = Join-Path $PSScriptRoot "Scripts\sync_discord.ps1"
+                & $discordScript
                 Write-Host "Discord theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
                 Write-Warning "Failed to sync Discord theme: $($_.Exception.Message)"
@@ -902,7 +1006,8 @@ function update-colours {
             # Sync Glazewm theme with the new colour palette
             try {
                 Write-Host "Syncing Glazewm theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-                & "$PSScriptRoot\Scripts\sync_glazewm.ps1"
+                $glazewmScript = Join-Path $PSScriptRoot "Scripts\sync_glazewm.ps1"
+                & $glazewmScript
                 Write-Host "Glazewm theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
                 Write-Warning "Failed to sync Glazewm theme: $($_.Exception.Message)"
@@ -912,7 +1017,8 @@ function update-colours {
             # Sync Komorebi theme with the new colour palette
             try {
                 Write-Host "Syncing Komorebi theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-                & "$PSScriptRoot\Scripts\sync_komorebi.ps1"
+                $komorebiScript = Join-Path $PSScriptRoot "Scripts\sync_komorebi.ps1"
+                & $komorebiScript
                 Write-Host "Komorebi theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
                 Write-Warning "Failed to sync Komorebi theme: $($_.Exception.Message)"
@@ -930,7 +1036,8 @@ function update-colours {
         if ($global:UsePywalfox) {
             try {
                 Write-Host "Syncing Pywalfox theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-                & "$PSScriptRoot\Scripts\sync_pywalfox.ps1"
+                $pywalfoxScript = Join-Path $PSScriptRoot "Scripts\sync_pywalfox.ps1"
+                & $pywalfoxScript
                 Write-Host "Pywalfox theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
                 Write-Warning "Failed to sync Pywalfox theme: $($_.Exception.Message)"
@@ -986,7 +1093,6 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SYSTEM UTILITIES$($
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))flushdns$($PSStyle.Reset)          - Clear DNS cache
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pkill$($PSStyle.Reset) <name>       - Kill processes by name
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pgrep$($PSStyle.Reset) <name>       - List processes by name with details
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))k9$($PSStyle.Reset) <name>         - Quick force-kill process
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))export$($PSStyle.Reset) <name> <value> - Set environment variable for session
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))TOOLS$($PSStyle.Reset)
@@ -1043,23 +1149,31 @@ try {
     chcp 65001 > $null
 } catch {}
 
+# Clear and run fastfetch
 Clear-Host
 
 # Force Fastfetch to use YOUR config every time (bypass path confusion)
-# Only run if window size is sufficient (minimum 80x24)
-if (Get-Command fastfetch -ErrorAction SilentlyContinue) {
+# Only run if window size is sufficient (minimum 60x22)
+if ($global:fastfetch) {
     try {
         $windowSize = $Host.UI.RawUI.WindowSize
-        if ($windowSize.Width -ge 80 -and $windowSize.Height -ge 24) {
-            fastfetch -c "$env:USERPROFILE\.config\fastfetch\config.jsonc"
+        $fastfetchConfig = Join-Path $HOME ".config\fastfetch\config.jsonc"
+        if ($windowSize.Width -ge 60 -and $windowSize.Height -ge 22) {
+            & $global:fastfetch -c $fastfetchConfig
         }
     } catch {
         # Fallback if window size detection fails
-        fastfetch -c "$env:USERPROFILE\.config\fastfetch\config.jsonc"
+        & $global:fastfetch -c $fastfetchConfig
     }
 }
 
-$PSStyle.OutputRendering = 'Host'
+# Set output rendering if supported (PowerShell 7.2+)
+try {
+    $PSStyle.OutputRendering = 'Host'
+} catch {
+    # Not supported in this PowerShell version
+    Write-Verbose "PSStyle.OutputRendering not supported in this PowerShell version"
+}
 
 # Startup message
 Write-Host "Use 'Show-Help' to list available functions." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
