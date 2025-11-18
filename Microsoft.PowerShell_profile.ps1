@@ -141,32 +141,37 @@ function Show-StartupDiagnostics {
             Write-Host "  $warning" -ForegroundColor Yellow
         }
     }
-    
+
     # Show unique errors from $Error (limit to first 10)
     $uniqueErrors = @()
     $seenMessages = @{}
     $errorCount = 0
-    
+
     foreach ($err in $Error) {
         if ($errorCount -ge 10) { break }
         $key = $err.Exception.Message
+
+        # FILTER: Skip known some errors that don't affect functionality
+        if ($key -match "Cannot find a variable with the name '__zoxide_hooked'") {
+            continue
+        }
+        if ($key -match "The predictive suggestion feature cannot be enabled because console output doesn't support virtual terminal") {
+            continue
+        }
+
         if (-not $seenMessages.ContainsKey($key)) {
             $seenMessages[$key] = $true
             $uniqueErrors += $err
             $errorCount++
         }
     }
-    
+
     if ($uniqueErrors.Count -gt 0) {
         Write-Host "`n=== Profile Startup Errors ===" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
         foreach ($err in $uniqueErrors) {
             $originInfo = if ($err.InvocationInfo.MyCommand) { " ($($err.InvocationInfo.MyCommand))" } else { "" }
             Write-Host "  $($err.Exception.Message)$originInfo" -ForegroundColor Red
         }
-    }
-    
-    if ($script:__profileWarnings.Count -eq 0 -and $uniqueErrors.Count -eq 0) {
-        Write-Host "`nNo startup warnings or errors detected." -ForegroundColor (Get-ProfileColor 'UI' 'Success')
     }
 }
 
@@ -391,7 +396,14 @@ if (Test-CommandExists zoxide) {
         }
 
         # Initialize hook.
-        $global:__zoxide_hooked = try { Get-Variable __zoxide_hooked -ErrorAction SilentlyContinue -ValueOnly } catch { $null }
+        $global:__zoxide_hooked = try {
+            Get-Variable -Name __zoxide_hooked -Scope Global -ErrorAction SilentlyContinue -ValueOnly
+        } catch {
+            # Suppress this specific error as it doesn't affect zoxide functionality
+                    # The Get-Variable error is a known PowerShell profile loading quirk that doesn't affect functionality
+            $null
+        }
+
         if ($global:__zoxide_hooked -ne 1) {
             $global:__zoxide_hooked = 1
             # Store the current prompt function before we override it
@@ -473,7 +485,11 @@ Set-Alias -Name vim -Value $EDITOR -Scope Global
 $global:__profile_lazy_initialized = $false
 
 # Store the original prompt function before zoxide potentially modifies it
-if (-not (Get-Variable __zoxide_prompt_old -ErrorAction SilentlyContinue)) {
+# FIX: Use -Scope Global and additional error handling
+try {
+    $promptVar = Get-Variable -Name __zoxide_prompt_old -Scope Global -ErrorAction SilentlyContinue -ValueOnly
+} catch {
+    # Suppress this specific error as it doesn't affect functionality
     $global:__zoxide_prompt_old = $null
 }
 
@@ -765,11 +781,23 @@ try {
     $resolved = Get-Command ls -ErrorAction SilentlyContinue
     if ($resolved -and $resolved.CommandType -ne 'Function') {
         # Remove alias if it exists (this will allow the function to be invoked)
-        if (Test-Path Alias:ls) { Remove-Item Alias:ls -Force -ErrorAction SilentlyContinue }
+        if (Test-Path Alias:ls) {
+            Remove-Item Alias:ls -Force -ErrorAction SilentlyContinue
+        }
 
         # Re-register function explicitly in the Function: drive to guarantee precedence
         try {
-            $scriptText = try { Get-Content -Path Function:\ls -Raw -ErrorAction SilentlyContinue } catch { $null }
+            # FIX: -Raw parameter doesn't work with Function provider, always use fallback method
+            try {
+                $content = Get-Content -Path Function:\ls -ErrorAction SilentlyContinue
+                if ($content -is [array]) {
+                    $scriptText = $content -join "`n"
+                } else {
+                    $scriptText = $content
+                }
+            } catch {
+                $scriptText = $null
+            }
             if ($scriptText) {
                 Set-Item -Path Function:\ls -Value $scriptText -Force -ErrorAction SilentlyContinue
             }
