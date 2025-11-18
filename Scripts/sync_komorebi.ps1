@@ -1,5 +1,5 @@
 # sync_komorebi.ps1
-# This script reads colors from wal colors.json and updates the Komorebi config
+# This script reads colors from wal colors.json and updates Komorebi config
 
 # Paths
 $walColorsPath = "$env:USERPROFILE\.cache\wal\colors.json"
@@ -8,15 +8,9 @@ $configPath = "$env:USERPROFILE\.config\komorebi\komorebi.json"
 # Read the wal colors file
 if (Test-Path $walColorsPath) {
     try {
-        # Read the file content
-        $content = Get-Content -Path $walColorsPath -Raw
-
-        # Replace single backslashes with double backslashes to ensure proper JSON formatting
-        $modifiedContent = $content -replace '\\', '\\'
-
-        # Write the modified content back to the file
-        Set-Content -Path $walColorsPath -Value $modifiedContent -NoNewline
-
+        # Fix JSON formatting first using centralized script
+        & "$PSScriptRoot\fix_json_formatting.ps1" -ColorsPath $walColorsPath
+        
         # Now read the modified content as JSON
         $walContent = Get-Content $walColorsPath -Raw | ConvertFrom-Json
     }

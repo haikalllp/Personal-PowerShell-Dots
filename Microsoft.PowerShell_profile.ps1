@@ -704,6 +704,9 @@ if (Test-CommandExists Set-PSReadLineOption) {
         return ($null -eq $hasSensitive)
     }
 }
+
+# Sync fzf colors with pywal theme
+& "$PSScriptRoot\Scripts\sync_fzf.ps1"
 #endregion
 
 #region PSFzf (Fuzzy Finder) Integration
@@ -1191,18 +1194,36 @@ function update-colours {
         }
     }
 
-    # Update terminal colors using pywal/winwal with selected backend and refresh Oh My Posh
+    # Update universal colors using pywal/winwal with selected backend
     try {
+        # Sync Windows Terminal Color Scheme
         if ($backend) {
-            Write-Host "Updating terminal colors with $backend backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            Write-Host "Updating windows terminal colors scheme with $backend backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
             Update-WalTheme -Backend $backend
         } else {
-            Write-Host "Updating terminal colors..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            Write-Host "Updating windows terminal colors scheme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
             Update-WalTheme
         }
         Write-Host "Terminal colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
 
-        # Synce Oh My Posh theme
+        # Sync Terminal Colors for PSReadLine, PSStyle and fzf
+        if (Test-CommandExists Set-PSReadLineOption) {
+            try {
+                # Update PSReadLine colors with new pywal/winwal theme
+                Write-Host "Updating PSReadLine colors..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                Initialize-DynamicPSColors
+                Write-Host "PSReadLine colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+
+                # Update fzf colors to match the new pywal/winwal theme
+                Write-Host "Updating fzf colors..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                & "$PSScriptRoot\Scripts\sync_fzf.ps1"
+                Write-Host "fzf colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            } catch {
+                Add-ProfileWarning "Failed to update PSReadLine colors: $($_.Exception.Message)"
+            }
+        }
+
+        # Sync Oh My Posh theme
         if (Test-OhMyPoshInstalled) {
             Write-Host "Syncing Oh My Posh theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
             # Reset the initialization flag to force reinitialization
@@ -1266,17 +1287,6 @@ function update-colours {
                 Write-Host "Pywalfox theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
                 Add-ProfileWarning "Failed to sync Pywalfox theme: $($_.Exception.Message)"
-            }
-        }
-
-        # Update PSReadLine colors with new pywal theme
-        if (Test-CommandExists Set-PSReadLineOption) {
-            try {
-                Write-Host "Updating PSReadLine colors..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-                Initialize-DynamicPSColors
-                Write-Host "PSReadLine colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
-            } catch {
-                Add-ProfileWarning "Failed to update PSReadLine colors: $($_.Exception.Message)"
             }
         }
 

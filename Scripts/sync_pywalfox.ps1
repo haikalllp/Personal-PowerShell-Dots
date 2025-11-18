@@ -7,14 +7,8 @@ $walColorsPath = "$env:USERPROFILE\.cache\wal\colors.json"
 # Check if the file exists
 if (Test-Path $walColorsPath) {
     try {
-        # Read the file content
-        $content = Get-Content -Path $walColorsPath -Raw
-
-        # Replace single backslashes with double backslashes to ensure proper JSON formatting
-        $modifiedContent = $content -replace '\\', '\\'
-
-        # Write the modified content back to the file
-        Set-Content -Path $walColorsPath -Value $modifiedContent -NoNewline
+        # Fix JSON formatting first using centralized script
+        & "$PSScriptRoot\fix_json_formatting.ps1" -ColorsPath $walColorsPath
 
         # Run pywalfox update
         pywalfox update
