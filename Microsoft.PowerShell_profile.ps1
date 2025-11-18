@@ -830,14 +830,14 @@ function update-colours {
         }
         Write-Host "Terminal colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
 
-        # Reinitialize Oh My Posh to apply the new color scheme
+        # Synce Oh My Posh theme
         if (Test-OhMyPoshInstalled) {
-            Write-Host "Refreshing Oh My Posh theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            Write-Host "Syncing Oh My Posh theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
             # Reset the initialization flag to force reinitialization
             $global:__omp_init_done = $false
             # Reinitialize Oh My Posh with the new theme
             Initialize-OhMyPosh
-            Write-Host "Oh My Posh theme refreshed!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            Write-Host "Oh My Posh theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
         } else {
             Write-Host "Oh My Posh not found, skipping theme refresh." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
         }
@@ -858,6 +858,15 @@ function update-colours {
             Write-Host "Glazewm theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
         } catch {
             Write-Warning "Failed to sync Glazewm theme: $($_.Exception.Message)"
+        }
+
+        # Sync Pywalfox theme with the new color palette
+        try {
+            Write-Host "Syncing Pywalfox theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            & "$PSScriptRoot\Scripts\sync_pywalfox.ps1"
+            Write-Host "Pywalfox theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+        } catch {
+            Write-Warning "Failed to sync Pywalfox theme: $($_.Exception.Message)"
         }
 
         # Reload yasb
