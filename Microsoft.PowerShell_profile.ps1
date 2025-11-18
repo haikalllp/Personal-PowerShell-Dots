@@ -56,8 +56,23 @@ $env:PSModulePath = "$env:PSModulePath;$env:USERPROFILE\Documents\WindowsPowersh
 # winget install imagemagick.imagemagick
 Import-Module winwal
 
+
+# Window Tiling Manager Configuration
+#================================================================================
+# Valid values: "komorebi", "glazewm", "none"
+# Only one should be active at a time
+$global:WindowTilingManager = "glazewm"
+
+# Optional Theme Sync Configuration
+#================================================================================
+# Set to $true if you have the corresponding application installed and want theme sync
+$global:UseYasb = $true            # Set to $true if using Yasb
+$global:UseBetterDiscord = $true   # Set to $true if using BetterDiscord
+$global:UsePywalfox = $true        # Set to $true if using Pywalfox
+#endregion
+
 #region Color Configuration
-# Centralized color configuration for PSStyles and PSReadLineOptions
+# Centralized colour configuration for PSStyles and PSReadLineOptions
 # Modify colors here
 
 $global:ProfileColors = @{
@@ -100,7 +115,7 @@ function Get-ProfileColor {
         return $global:ProfileColors[$Category][$Name]
     }
 
-    # Return default color if not found
+    # Return default colour if not found
     return 'White'
 }
 #endregion
@@ -842,47 +857,72 @@ function update-colours {
             Write-Host "Oh My Posh not found, skipping theme refresh." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
         }
 
-        # Sync Discord theme with the new color palette
-        try {
-            Write-Host "Syncing Discord theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-            & "$PSScriptRoot\Scripts\sync_discord.ps1"
-            Write-Host "Discord theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
-        } catch {
-            Write-Warning "Failed to sync Discord theme: $($_.Exception.Message)"
+        # Sync Discord theme with the new colour palette (only if BetterDiscord is enabled)
+        if ($global:UseBetterDiscord) {
+            try {
+                Write-Host "Syncing Discord theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                & "$PSScriptRoot\Scripts\sync_discord.ps1"
+                Write-Host "Discord theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            } catch {
+                Write-Warning "Failed to sync Discord theme: $($_.Exception.Message)"
+            }
         }
 
-        # Sync Glazewm theme with the new color palette
-        try {
-            Write-Host "Syncing Glazewm theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-            & "$PSScriptRoot\Scripts\sync_glazewm.ps1"
-            Write-Host "Glazewm theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
-        } catch {
-            Write-Warning "Failed to sync Glazewm theme: $($_.Exception.Message)"
+        # Sync window tiling manager theme based on global variable
+        if ($global:WindowTilingManager -eq "glazewm") {
+            # Sync Glazewm theme with the new colour palette
+            try {
+                Write-Host "Syncing Glazewm theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                & "$PSScriptRoot\Scripts\sync_glazewm.ps1"
+                Write-Host "Glazewm theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            } catch {
+                Write-Warning "Failed to sync Glazewm theme: $($_.Exception.Message)"
+            }
+        }
+        elseif ($global:WindowTilingManager -eq "komorebi") {
+            # Sync Komorebi theme with the new colour palette
+            try {
+                Write-Host "Syncing Komorebi theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                & "$PSScriptRoot\Scripts\sync_komorebi.ps1"
+                Write-Host "Komorebi theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            } catch {
+                Write-Warning "Failed to sync Komorebi theme: $($_.Exception.Message)"
+            }
+        }
+        elseif ($global:WindowTilingManager -eq "none") {
+            # No window tiling manager to sync
+            Write-Host "No window tiling manager configured, skipping theme sync." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+        }
+        else {
+            Write-Warning "Invalid WindowTilingManager value: '$($global:WindowTilingManager)'. Expected 'komorebi', 'glazewm', or 'none'."
         }
 
-        # Sync Pywalfox theme with the new color palette
-        try {
-            Write-Host "Syncing Pywalfox theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-            & "$PSScriptRoot\Scripts\sync_pywalfox.ps1"
-            Write-Host "Pywalfox theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
-        } catch {
-            Write-Warning "Failed to sync Pywalfox theme: $($_.Exception.Message)"
+        # Sync Pywalfox theme with the new colour palette (only if Pywalfox is enabled)
+        if ($global:UsePywalfox) {
+            try {
+                Write-Host "Syncing Pywalfox theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                & "$PSScriptRoot\Scripts\sync_pywalfox.ps1"
+                Write-Host "Pywalfox theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            } catch {
+                Write-Warning "Failed to sync Pywalfox theme: $($_.Exception.Message)"
+            }
         }
 
-        # Reload yasb
-        try {
-            Write-Host "Reloading Yasb..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-            & yasbc reload
-            Write-Host "Yasb reloaded successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
-        } catch {
-            Write-Warning "Failed to reload Yasb: $($_.Exception.Message)"
+        # Reload yasb with the new colour palette (if enabled)
+        if ($global:UseYasb) {
+            try {
+                Write-Host "Reloading Yasb..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                & yasbc reload
+                Write-Host "Yasb reloaded successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            } catch {
+                Write-Warning "Failed to reload Yasb: $($_.Exception.Message)"
+            }
         }
+
     } catch {
-        Write-Warning "Failed to update terminal colors: $($_.Exception.Message)"
+        Write-Warning "Failed to update colours: $($_.Exception.Message)"
     }
 }
-#endregion
-
 
 #region Help and Aliases
 # Profile help system and convenient aliases
@@ -954,7 +994,7 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (Z
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))zi$($PSStyle.Reset)                    - Interactive directory selection
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))THEME UTILITIES$($PSStyle.Reset)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colours$($PSStyle.Reset) [backend] - Update terminal colors and refresh Oh My Posh theme
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colours$($PSStyle.Reset) [backend] - Update universal colour theme works with (terminal, yasb, better discord, glazewm, komorebi, pywalfox)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) no argument: normal Update-WalTheme
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) backends: haishoku, colorz, colorthief
 
