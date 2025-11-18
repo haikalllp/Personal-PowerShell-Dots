@@ -63,6 +63,10 @@ $global:UseYasb = $true            # Set to $true if using Yasb
 $global:UseBetterDiscord = $true   # Set to $true if using BetterDiscord
 $global:UsePywalfox = $true        # Set to $true if using Pywalfox
 
+# Startup Diagnostics Configuration
+# Set to $false to prevent Clear-Host from clearing warnings/errors during startup
+$global:ClearOnStartup = $true
+
 
 #=================================================================================
 # Oh My Posh Theme Mode Configuration
@@ -117,6 +121,54 @@ $global:ProfileColors = @{
 # ================================================================================
 # DO NOT TOUCH BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING
 # ================================================================================
+
+# Startup Diagnostics System
+#================================================================================
+# Capture warnings during profile loading to display after fastfetch
+$script:__profileWarnings = @()
+
+function Add-ProfileWarning {
+    param([string]$Message)
+    $script:__profileWarnings += $Message
+    Write-Warning $Message
+}
+
+function Show-StartupDiagnostics {
+    # Display captured warnings and errors from profile startup
+    if ($script:__profileWarnings.Count -gt 0) {
+        Write-Host "`n=== Profile Startup Warnings ===" -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
+        foreach ($warning in $script:__profileWarnings) {
+            Write-Host "  $warning" -ForegroundColor Yellow
+        }
+    }
+    
+    # Show unique errors from $Error (limit to first 10)
+    $uniqueErrors = @()
+    $seenMessages = @{}
+    $errorCount = 0
+    
+    foreach ($err in $Error) {
+        if ($errorCount -ge 10) { break }
+        $key = $err.Exception.Message
+        if (-not $seenMessages.ContainsKey($key)) {
+            $seenMessages[$key] = $true
+            $uniqueErrors += $err
+            $errorCount++
+        }
+    }
+    
+    if ($uniqueErrors.Count -gt 0) {
+        Write-Host "`n=== Profile Startup Errors ===" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        foreach ($err in $uniqueErrors) {
+            $originInfo = if ($err.InvocationInfo.MyCommand) { " ($($err.InvocationInfo.MyCommand))" } else { "" }
+            Write-Host "  $($err.Exception.Message)$originInfo" -ForegroundColor Red
+        }
+    }
+    
+    if ($script:__profileWarnings.Count -eq 0 -and $uniqueErrors.Count -eq 0) {
+        Write-Host "`nNo startup warnings or errors detected." -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+    }
+}
 
 # Set all module paths
 $psModulesPath = Join-Path $HOME "Documents\PowerShell\Modules"
@@ -194,7 +246,7 @@ Validate-Dependencies
 try {
     Import-Module winwal -ErrorAction Stop
 } catch {
-    Write-Warning "Failed to import winwal module: $($_.Exception.Message)"
+    Add-ProfileWarning "Failed to import winwal module: $($_.Exception.Message)"
     Write-Host "Please ensure winwal is installed: git clone https://github.com/scaryrawr/winwal `"$($HOME)\Documents\PowerShell\Modules\winwal`"" -ForegroundColor (Get-ProfileColor 'UI' 'Info')
 }
 
@@ -227,11 +279,11 @@ if ($global:OhMyPoshThemeMode -eq 'remote') {
     if ($ompLocal -and (Test-Path -LiteralPath $ompLocal)) {
         $ompConfig = $ompLocal
     } else {
-        Write-Warning "Oh My Posh local theme not found at '$ompLocal'. Consider switching to 'remote' mode."
+        Add-ProfileWarning "Oh My Posh local theme not found at '$ompLocal'. Consider switching to 'remote' mode."
         $ompConfig = $ompRemote
     }
 } else {
-    Write-Warning "Invalid OhMyPoshThemeMode '$global:OhMyPoshThemeMode'. Defaulting to remote."
+    Add-ProfileWarning "Invalid OhMyPoshThemeMode '$global:OhMyPoshThemeMode'. Defaulting to remote."
     $ompConfig = $ompRemote
 }
 
@@ -339,7 +391,7 @@ if (Test-CommandExists zoxide) {
         }
 
         # Initialize hook.
-        $global:__zoxide_hooked = (Get-Variable __zoxide_hooked -ErrorAction SilentlyContinue -ValueOnly)
+        $global:__zoxide_hooked = try { Get-Variable __zoxide_hooked -ErrorAction SilentlyContinue -ValueOnly } catch { $null }
         if ($global:__zoxide_hooked -ne 1) {
             $global:__zoxide_hooked = 1
             # Store the current prompt function before we override it
@@ -628,7 +680,7 @@ function Install-TerminalIcons {
         return
     }
     if (-not (Get-Command Install-Module -ErrorAction SilentlyContinue)) {
-        Write-Warning "Install-Module not available in this session."
+        Add-ProfileWarning "Install-Module not available in this session."
         return
     }
     Write-Host "Installing Terminal-Icons module for CurrentUser..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
@@ -638,7 +690,7 @@ function Install-TerminalIcons {
         $global:__terminalicons_init = $true
         Write-Host "Terminal-Icons installed and imported." -ForegroundColor (Get-ProfileColor 'UI' 'Success')
     } catch {
-        Write-Warning "Failed to install Terminal-Icons: $($_.Exception.Message)"
+        Add-ProfileWarning "Failed to install Terminal-Icons: $($_.Exception.Message)"
     }
 }
 
@@ -717,7 +769,7 @@ try {
 
         # Re-register function explicitly in the Function: drive to guarantee precedence
         try {
-            $scriptText = (Get-Content -Path Function:\ls -Raw -ErrorAction SilentlyContinue)
+            $scriptText = try { Get-Content -Path Function:\ls -Raw -ErrorAction SilentlyContinue } catch { $null }
             if ($scriptText) {
                 Set-Item -Path Function:\ls -Value $scriptText -Force -ErrorAction SilentlyContinue
             }
@@ -830,7 +882,7 @@ function Update-PowerShell {
         Write-Host "Running choco to upgrade PowerShell..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
         Start-Process -FilePath choco -ArgumentList "upgrade powershell -y" -NoNewWindow -Wait
     } else {
-        Write-Warning "Neither winget nor choco found. Install 'App Installer' from the Microsoft Store or Chocolatey."
+        Add-ProfileWarning "Neither winget nor choco found. Install 'App Installer' from the Microsoft Store or Chocolatey."
         Write-Host "  winget: Install 'App Installer' from Microsoft Store, then run:"
         Write-Host "    winget upgrade --id Microsoft.PowerShell -e --accept-source-agreements --accept-package-agreements"
         Write-Host "  Chocolatey: https://chocolatey.org/install"
@@ -861,12 +913,12 @@ function Edit-Profile {
 
 function winutil {
     # Run the WinUtil full-release script
-    try { irm https://christitus.com/win | iex } catch { Write-Warning "Failed to load winutil: $($_.Exception.Message)" }
+    try { irm https://christitus.com/win | iex } catch { Add-ProfileWarning "Failed to load winutil: $($_.Exception.Message)" }
 }
 
 function winutildev {
     # Run the WinUtil pre-release script
-    try { irm https://christitus.com/windev | iex } catch { Write-Warning "Failed to load winutildev: $($_.Exception.Message)" }
+    try { irm https://christitus.com/windev | iex } catch { Add-ProfileWarning "Failed to load winutildev: $($_.Exception.Message)" }
 }
 
 function Get-PubIP {
@@ -875,7 +927,7 @@ function Get-PubIP {
         $ip = (Invoke-WebRequest -Uri "http://ifconfig.me/ip" -UseBasicParsing).Content.Trim()
         Write-Host "Public IP: $ip" -ForegroundColor (Get-ProfileColor 'UI' 'Info')
     } catch {
-        Write-Warning "Failed to retrieve public IP: $($_.Exception.Message)"
+        Add-ProfileWarning "Failed to retrieve public IP: $($_.Exception.Message)"
     }
 }
 
@@ -961,7 +1013,7 @@ function update-colours {
             $backend = "haishoku"
         }
         default {
-            Write-Host "Invalid choice. Using default backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
+            Add-ProfileWarning "Invalid choice. Using default backend..."
             $backend = $null
         }
     }
@@ -997,7 +1049,7 @@ function update-colours {
                 & $discordScript
                 Write-Host "Discord theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
-                Write-Warning "Failed to sync Discord theme: $($_.Exception.Message)"
+                Add-ProfileWarning "Failed to sync Discord theme: $($_.Exception.Message)"
             }
         }
 
@@ -1010,7 +1062,7 @@ function update-colours {
                 & $glazewmScript
                 Write-Host "Glazewm theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
-                Write-Warning "Failed to sync Glazewm theme: $($_.Exception.Message)"
+                Add-ProfileWarning "Failed to sync Glazewm theme: $($_.Exception.Message)"
             }
         }
         elseif ($global:WindowTilingManager -eq "komorebi") {
@@ -1021,7 +1073,7 @@ function update-colours {
                 & $komorebiScript
                 Write-Host "Komorebi theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
-                Write-Warning "Failed to sync Komorebi theme: $($_.Exception.Message)"
+                Add-ProfileWarning "Failed to sync Komorebi theme: $($_.Exception.Message)"
             }
         }
         elseif ($global:WindowTilingManager -eq "none") {
@@ -1029,7 +1081,7 @@ function update-colours {
             Write-Host "No window tiling manager configured, skipping theme sync." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
         }
         else {
-            Write-Warning "Invalid WindowTilingManager value: '$($global:WindowTilingManager)'. Expected 'komorebi', 'glazewm', or 'none'."
+            Add-ProfileWarning "Invalid WindowTilingManager value: '$($global:WindowTilingManager)'. Expected 'komorebi', 'glazewm', or 'none'."
         }
 
         # Sync Pywalfox theme with the new colour palette (only if Pywalfox is enabled)
@@ -1040,7 +1092,7 @@ function update-colours {
                 & $pywalfoxScript
                 Write-Host "Pywalfox theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
-                Write-Warning "Failed to sync Pywalfox theme: $($_.Exception.Message)"
+                Add-ProfileWarning "Failed to sync Pywalfox theme: $($_.Exception.Message)"
             }
         }
 
@@ -1051,12 +1103,12 @@ function update-colours {
                 & yasbc reload
                 Write-Host "Yasb reloaded successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
-                Write-Warning "Failed to reload Yasb: $($_.Exception.Message)"
+                Add-ProfileWarning "Failed to reload Yasb: $($_.Exception.Message)"
             }
         }
 
     } catch {
-        Write-Warning "Failed to update colours: $($_.Exception.Message)"
+        Add-ProfileWarning "Failed to update colours: $($_.Exception.Message)"
     }
 }
 
@@ -1115,6 +1167,7 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))GIT SHORTCUTS$($PSS
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))PROFILE MANAGEMENT$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Edit-Profile$($PSStyle.Reset) (ep)   - Open profile in configured editor
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Update-PowerShell$($PSStyle.Reset) - Update PowerShell (winget/choco)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Show-StartupDiagnostics$($PSStyle.Reset) - Display captured startup warnings/errors
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SYSTEM TOOLS$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))winutil$($PSStyle.Reset)             - Run WinUtil full-release script
@@ -1141,6 +1194,11 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))THEME UTILITIES$($P
 # Create short alias for Edit-Profile
 Set-Alias -Name ep -Value Edit-Profile -Scope Global
 
+
+# ===============================================================================
+# Final Startup Tasks
+# ===============================================================================
+
 # Ensure proper encoding for UTF-8 support
 try {
     [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
@@ -1150,7 +1208,10 @@ try {
 } catch {}
 
 # Clear and run fastfetch
-Clear-Host
+# Only clear if ClearOnStartup is enabled
+if ($global:ClearOnStartup) {
+    Clear-Host
+}
 
 # Force Fastfetch to use YOUR config every time (bypass path confusion)
 # Only run if window size is sufficient (minimum 60x22)
@@ -1165,6 +1226,11 @@ if ($global:fastfetch) {
         # Fallback if window size detection fails
         & $global:fastfetch -c $fastfetchConfig
     }
+}
+
+# Show startup diagnostics after fastfetch if any warnings/errors were captured
+if ($script:__profileWarnings.Count -gt 0 -or $Error.Count -gt 0) {
+    Show-StartupDiagnostics
 }
 
 # Set output rendering if supported (PowerShell 7.2+)
