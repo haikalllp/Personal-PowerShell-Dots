@@ -15,6 +15,8 @@
 # - Oh My Posh (https://ohmyposh.dev/) - Theme engine for enhanced prompt
 # - zoxide (https://github.com/ajeetdsouza/zoxide) - Smart directory navigation
 # - FZF (https://github.com/junegunn/fzf) - Fuzzy finder for files/history
+# - PSFzf (PowerShell module) - PowerShell integration for FZF
+# - fd (https://github.com/sharkdp/fd) - Fast file finder for FZF integration
 # - ripgrep (https://github.com/BurntSushi/ripgrep) - Fast text search for FZF
 # - Terminal-Icons (PowerShell module) - File icons for enhanced ls output
 # - fastfetch (https://github.com/fastfetch-cli/fastfetch) - System info display
@@ -30,13 +32,14 @@
 #
 # Complete Required Dependencies installation commands:
 # Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-# choco install oh-my-posh zoxide fzf ripgrep fastfetch neovim -y
+# choco install oh-my-posh zoxide fzf ripgrep fastfetch neovim fd -y
+# Install-Module -Name Terminal-Icons -Repository PSGallery
+# Install-Module -Name PSFzf -Scope CurrentUser -Force
 # git clone https://github.com/scaryrawr/winwal "$HOME\Documents\PowerShell\Modules\winwal"
 # rm -Path "$HOME\Documents\PowerShell\Modules\winwal\.git" -r -fo
 # winget install imagemagick.imagemagick
 # winget install Python.Python.3.13
 # pip install pywal colorthief colorz haishoku
-# Install-Module -Name Terminal-Icons -Repository PSGallery
 #
 #================================================================================
 # Optional Dependencies:
@@ -155,9 +158,6 @@ function Show-StartupDiagnostics {
         if ($key -match "Cannot find a variable with the name '__zoxide_hooked'") {
             continue
         }
-        if ($key -match "The predictive suggestion feature cannot be enabled because console output doesn't support virtual terminal") {
-            continue
-        }
 
         if (-not $seenMessages.ContainsKey($key)) {
             $seenMessages[$key] = $true
@@ -211,10 +211,10 @@ $global:fastfetch = if (Test-CommandExists fastfetch) { 'fastfetch' } else { $nu
 # Validate required dependencies and provide clear error messages
 function Validate-Dependencies {
     $requiredCommands = @(
-        'oh-my-posh', 'zoxide', 'fzf', 'rg', 'fastfetch', 'nvim'
+        'oh-my-posh', 'zoxide', 'fzf', 'rg', 'fastfetch', 'nvim', 'fd'
     )
     $requiredModules = @(
-        'Terminal-Icons', 'winwal'
+        'Terminal-Icons', 'winwal', 'PSFzf'
     )
 
     $missingCommands = @()
@@ -453,6 +453,7 @@ if (Test-CommandExists zoxide) {
         }
 
         # Jump to a directory using interactive search.
+        # Simple implementation using zoxide's built-in fzf integration
         function global:__zoxide_zi {
             $result = __zoxide_bin query -i -- @args
             if ($LASTEXITCODE -eq 0) {
@@ -573,41 +574,53 @@ if (Test-CommandExists Set-PSReadLineOption) {
 }
 #endregion
 
-#region FZF (Fuzzy Finder) Integration
-# Initialize FZF with PowerShell integration for fuzzy searching files, directories, and history
-if (Test-CommandExists fzf) {
-    # Configure FZF default command - prefer ripgrep for speed, fallback to Get-ChildItem
-    if (Test-CommandExists rg) {
-        # Use PowerShell single-quoted string so double quotes reach rg on Windows
-        $env:FZF_DEFAULT_COMMAND = 'rg --files --hidden --follow --glob "!.git/**" --glob "!node_modules/**"'
-    } else {
-        $env:FZF_DEFAULT_COMMAND = "Get-ChildItem -Recurse -File -Force -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName"
-    }
+#region PSFzf (Fuzzy Finder) Integration
+# Initialize PSFzf module for enhanced fzf integration with PowerShell
 
-    # PSReadLine integration for FZF
-    if (Test-CommandExists Set-PSReadLineKeyHandler) {
-        # Ctrl+T: Fuzzy file search and insert path
-        Set-PSReadLineKeyHandler -Key Ctrl+t -ScriptBlock {
-            try {
-                $selection = & fzf --height 40% --reverse --border
-                if (-not [string]::IsNullOrEmpty($selection)) {
-                    [Microsoft.PowerShell.PSConsoleReadLine]::Insert($selection.Trim())
-                }
-            } catch {}
+# Set consistent FZF options for all fzf invocations (including zoxide)
+# This ensures zi uses the same appearance as Ctrl+t and Ctrl+r
+if (-not $env:FZF_DEFAULT_OPTS) {
+    $env:FZF_DEFAULT_OPTS = '--height 40% --reverse --border --ansi'
+}
+# Ensure zoxide uses the same fzf options as our custom bindings
+# _ZO_FZF_OPTS is used by zoxide when calling fzf interactively
+if (-not $env:_ZO_FZF_OPTS) {
+    $env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
+}
+
+# Check if PSFzf module is available
+$psfzfAvailable = Get-Module -ListAvailable -Name PSFzf
+
+if ($psfzfAvailable) {
+    try {
+        # Import PSFzf module
+        Import-Module PSFzf -ErrorAction Stop
+
+        # Set key bindings for fzf
+        Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
+
+        # Use fd as the default file searcher for fzf if available
+        if (Test-CommandExists fd) {
+            Set-PsFzfOption -EnableFd:$true
+            # Set FZF_DEFAULT_COMMAND to use fd with appropriate options
+            $env:FZF_DEFAULT_COMMAND = 'fd -a -j 4'
         }
+        Write-Verbose "PSFzf module loaded successfully with key bindings: Ctrl+t (file provider), Ctrl+r (history search)"
 
-        # Ctrl+R: Fuzzy history search
-        Set-PSReadLineKeyHandler -Key Ctrl+r -ScriptBlock {
-            try {
-                $historyPath = (Get-PSReadLineOption).HistorySavePath
-                if (Test-Path $historyPath) {
-                    $selection = Get-Content $historyPath -ErrorAction SilentlyContinue | Where-Object { $_ -ne "" } | fzf --reverse --height 40%
-                    if (-not [string]::IsNullOrEmpty($selection)) {
-                        [Microsoft.PowerShell.PSConsoleReadLine]::RevertLine()
-                        [Microsoft.PowerShell.PSConsoleReadLine]::Insert($selection.Trim())
-                    }
-                }
-            } catch {}
+    } catch {
+        Add-ProfileWarning "Failed to import PSFzf module: $($_.Exception.Message)"
+        Add-ProfileWarning "Install PSFzf with: Install-Module -Name PSFzf -Scope CurrentUser -Force"
+    }
+} else {
+    Add-ProfileWarning "PSFzf module not found. Install with: Install-Module -Name PSFzf -Scope CurrentUser -Force"
+
+    # Fallback to basic fzf configuration if fzf command is available but PSFzf is not
+    if (Test-CommandExists fzf) {
+        Add-ProfileWarning "Basic fzf command detected but PSFzf module not installed. Install PSFzf for full integration."
+
+        # Set basic FZF_DEFAULT_COMMAND if fd is available
+        if (Test-CommandExists fd) {
+            $env:FZF_DEFAULT_COMMAND = 'fd -a -j 4'
         }
     }
 }
@@ -1201,9 +1214,10 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SYSTEM TOOLS$($PSSt
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))winutil$($PSStyle.Reset)             - Run WinUtil full-release script
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))winutildev$($PSStyle.Reset)          - Run WinUtil pre-release script
 
-$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))FUZZY FINDER (FZF)$($PSStyle.Reset)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Ctrl + t$($PSStyle.Reset)            - Launch fzf for file selection
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Ctrl + r$($PSStyle.Reset)            - Fuzzy search command history
+$($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))FUZZY FINDER (PSFZF)$($PSStyle.Reset)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Ctrl+t$($PSStyle.Reset)             - Fuzzy file selection (requires PSFzf)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Ctrl+r$($PSStyle.Reset)             - Fuzzy history search (requires PSFzf)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))fd | Invoke-Fzf$($PSStyle.Reset)     - Fuzzy find files listed by fd
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (ZOXIDE)$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Z$($PSStyle.Reset)                     - Smart directory navigation
