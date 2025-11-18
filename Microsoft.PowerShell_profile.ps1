@@ -87,23 +87,47 @@ $ompRemote  = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/
 
 #=================================================================================
 # Centralized colour configuration for PSStyles and PSReadLineOptions
-# Modify PSReadLine colors here
-$global:ProfileColors = @{
-    # PSReadLine Syntax Highlighting Colors
+# Modify Powershell colors here
+
+# Dynamic PSReadLine/PSStyle Colors from Pywal/winwal
+# You can customize which pywal colors map to which PSReadLine tokens
+$global:DynamicPSColors = @{
+    Command = 'color4'        # using color4 for commands
+    Comment = 'color8'        # using color8 for comments
+    Default = 'foreground'    # using foreground for default
+    Emphasis = 'color3'       # using color3 for emphasis
+    Error = 'color1'          # using color1 for errors
+    Keyword = 'color5'        # using color5 for keywords
+    Member = 'color6'         # using color6 for members
+    Number = 'color3'         # using color3 for numbers
+    Operator = 'color5'       # using color5 for operators
+    Parameter = 'color14'     # using color14 for parameters
+    String = 'color2'         # using color2 for strings
+    Type = 'color13'          # using color13 for types
+    Variable = 'color12'      # using color12 for variables
+}
+
+$global:PSColors = @{
+    # PSReadLine Colors (static colors)
+    # These will be used as fallbacks if pywal colors are not available
     PSReadLine = @{
-        Command = '#87CEEB'       # SkyBlue
-        Parameter = '#98FB98'     # PaleGreen
-        Operator = '#FFB6C1'      # LightPink
-        Variable = '#DDA0DD'      # Plum
-        String = '#FFDAB9'        # PeachPuff
-        Number = '#B0E0E6'        # PowderBlue
-        Type = '#F0E68C'          # Khaki
-        Comment = '#D3D3D3'       # LightGray
-        Keyword = '#8367c7'       # Violet
-        Error = '#FF6347'         # Tomato
+        Command = '#87CEEB'       # SkyBlue (fallback)
+        Comment = '#D3D3D3'       # LightGray (fallback)
+        Default = '#FFFFFF'       # White (fallback)
+        Emphasis = '#FFB6C1'      # LightPink (fallback)
+        Error = '#FF6347'         # Tomato (fallback)
+        Keyword = '#8367c7'       # Violet (fallback)
+        Member = '#98FB98'        # PaleGreen (fallback)
+        Number = '#B0E0E6'        # PowderBlue (fallback)
+        Operator = '#FFB6C1'      # LightPink (fallback)
+        Parameter = '#98FB98'     # PaleGreen (fallback)
+        String = '#FFDAB9'        # PeachPuff (fallback)
+        Type = '#F0E68C'          # Khaki (fallback)
+        Variable = '#DDA0DD'      # Plum (fallback)
     }
 
-    # UI Colors for various output
+    # UI 'PSStyles' Colors for various output
+    # These will be used as fallbacks if pywal colors are not available
     UI = @{
         HelpTitle = 'Cyan'
         HelpSeparator = 'Yellow'
@@ -119,11 +143,16 @@ $global:ProfileColors = @{
 #endregion
 
 
-# ================================================================================
-# Core Functions
-# ================================================================================
-# DO NOT TOUCH BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING
-# ================================================================================
+#! ================================================================================
+#!
+#! WARNING!!
+#! DO NOT TOUCH BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING
+#!
+#! ================================================================================
+
+#================================================================================
+# CORE PROFILE LOGIC
+#================================================================================
 
 # Startup Diagnostics System
 #================================================================================
@@ -259,13 +288,119 @@ function Get-ProfileColor {
         [string]$Name
     )
 
-    if ($global:ProfileColors.ContainsKey($Category) -and
-        $global:ProfileColors[$Category].ContainsKey($Name)) {
-        return $global:ProfileColors[$Category][$Name]
+    if ($global:PSColors.ContainsKey($Category) -and
+        $global:PSColors[$Category].ContainsKey($Name)) {
+        return $global:PSColors[$Category][$Name]
     }
 
     # Return default colour if not found
     return 'White'
+}
+#endregion
+
+#region Pywal Color Integration
+#================================================================================
+# Functions to integrate pywal colors with PSReadLine syntax highlighting
+
+function Get-PywalColors {
+    # Load pywal colors from colors.json file
+    param(
+        [string]$ColorsPath = "$HOME\.cache\wal\colors.json"
+    )
+
+    if (-not (Test-Path -LiteralPath $ColorsPath)) {
+        Write-Verbose "Pywal colors file not found at: $ColorsPath"
+        return $null
+    }
+
+    try {
+        $colorsData = Get-Content -Path $ColorsPath -Raw | ConvertFrom-Json
+        return $colorsData
+    } catch {
+        Write-Verbose "Failed to parse pywal colors file: $($_.Exception.Message)"
+        return $null
+    }
+}
+
+function Set-DynamicPSColors {
+    # Apply pywal colors to PSReadLine syntax highlighting
+    param(
+        [string]$ColorsPath = "$HOME\.cache\wal\colors.json"
+    )
+
+    $pywalColors = Get-PywalColors -ColorsPath $ColorsPath
+
+    if ($null -eq $pywalColors) {
+        Write-Verbose "Using fallback PSReadLine colors"
+        return $false
+    }
+
+    try {
+        # Create PSReadLine colors dictionary using configurable mapping
+        $PSColors = @{}
+
+        foreach ($token in $global:DynamicPSColors.Keys) {
+            $colorKey = $global:DynamicPSColors[$token]
+
+            # Get the color value from pywal colors
+            if ($colorKey -eq 'foreground') {
+                $colorValue = $pywalColors.special.foreground
+            } elseif ($colorKey -eq 'background') {
+                $colorValue = $pywalColors.special.background
+            } elseif ($colorKey -eq 'cursor') {
+                $colorValue = $pywalColors.special.cursor
+            } else {
+                # Handle color0-15
+                $colorValue = $pywalColors.colors.$colorKey
+            }
+
+            # Apply the color if found, otherwise use fallback
+            if ($colorValue) {
+                $PSColors[$token] = $colorValue
+            } else {
+                # Use fallback from PSColors if pywal color not found
+                $PSColors[$token] = $global:PSColors.PSReadLine[$token]
+                Write-Verbose "Pywal color '$colorKey' not found for token '$token', using fallback color from PSColors"
+            }
+        }
+
+        # Apply the colors to PSReadLine
+        Set-PSReadLineOption -Colors $PSColors
+
+        # Update the global PSColors to maintain consistency
+        $global:PSColors.PSReadLine = $PSColors
+
+        Write-Verbose "Applied pywal colors to PSReadLine using configurable mapping"
+        return $true
+    } catch {
+        Write-Verbose "Failed to apply pywal colors to PSReadLine: $($_.Exception.Message)"
+        return $false
+    }
+}
+
+function Initialize-DynamicPSColors {
+    # Initialize pywal colors for PSReadLine using DynamicPSColors with PSColors fallback
+    param(
+        [string]$ColorsPath = "$HOME\.cache\wal\colors.json"
+    )
+
+    # Only attempt to set pywal colors if PSReadLine is available
+    if (-not (Test-CommandExists Set-PSReadLineOption)) {
+        Write-Verbose "PSReadLine not available, skipping pywal color initialization"
+        return
+    }
+
+    $success = Set-DynamicPSColors -ColorsPath $ColorsPath
+
+    if (-not $success) {
+        Write-Verbose "Failed to load pywal colors, using PSColors.PSReadLine as fallback"
+        # Ensure PSColors are applied as fallback
+        try {
+            Set-PSReadLineOption -Colors $global:PSColors.PSReadLine
+        } catch {
+            Write-Verbose "Failed to apply fallback PSColors: $($_.Exception.Message)"
+        }
+    }
 }
 #endregion
 
@@ -521,13 +656,16 @@ function prompt {
 #region PSReadLine Configuration
 # Enhanced command line editing experience with colors, history, and custom key bindings
 if (Test-CommandExists Set-PSReadLineOption) {
+    # Initialize pywal colors for PSReadLine (will use fallback if colors.json not found)
+    Initialize-DynamicPSColors
+
     # Configure PSReadLine with syntax highlighting colors and behavior settings
     $PSReadLineOptions = @{
         EditMode = 'Windows'
         HistoryNoDuplicates = $true
         HistorySearchCursorMovesToEnd = $true
-        # Colors are now centralized in $global:ProfileColors.PSReadLine
-        Colors = $global:ProfileColors.PSReadLine
+        # Colors are now sourced from DynamicPSColors with PSColors as fallback
+        Colors = $global:PSColors.PSReadLine
         PredictionSource = 'History'
         PredictionViewStyle = 'ListView'
         BellStyle = 'None'
@@ -1131,6 +1269,17 @@ function update-colours {
             }
         }
 
+        # Update PSReadLine colors with new pywal theme
+        if (Test-CommandExists Set-PSReadLineOption) {
+            try {
+                Write-Host "Updating PSReadLine colors..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                Initialize-DynamicPSColors
+                Write-Host "PSReadLine colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            } catch {
+                Add-ProfileWarning "Failed to update PSReadLine colors: $($_.Exception.Message)"
+            }
+        }
+
         # Reload yasb with the new colour palette (if enabled)
         if ($global:UseYasb) {
             try {
@@ -1211,7 +1360,6 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SYSTEM TOOLS$($PSSt
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))FUZZY FINDER (PSFZF)$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Ctrl+t$($PSStyle.Reset)             - Fuzzy file selection (requires PSFzf)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Ctrl+r$($PSStyle.Reset)             - Fuzzy history search (requires PSFzf)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))fd | Invoke-Fzf$($PSStyle.Reset)     - Fuzzy find files listed by fd
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (ZOXIDE)$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Z$($PSStyle.Reset)                     - Smart directory navigation
@@ -1220,7 +1368,7 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (Z
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))THEME UTILITIES$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colours$($PSStyle.Reset) - Update universal colour theme following wallpaper colour with interactive menu
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Interactive menu to select backend: default, colorz, colorthief, haishoku
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Works with: terminal, yasb, glazewm, komorebi, better discord, pywalfox
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Works with: Terminal, PSReadLine, Yasb, GlazeWM, Komorebi, Better Discord, Pywalfox.
 
 "@
 
