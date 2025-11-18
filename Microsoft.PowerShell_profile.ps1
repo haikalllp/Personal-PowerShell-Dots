@@ -129,6 +129,7 @@ $global:ProfileColors = @{
 #================================================================================
 # Capture warnings during profile loading to display after fastfetch
 $script:__profileWarnings = @()
+$script:__profileErrorCountStart = $Error.Count
 
 function Add-ProfileWarning {
     param([string]$Message)
@@ -137,40 +138,33 @@ function Add-ProfileWarning {
 }
 
 function Show-StartupDiagnostics {
-    # Display captured warnings and errors from profile startup
+    # Warnings
     if ($script:__profileWarnings.Count -gt 0) {
         Write-Host "`n=== Profile Startup Warnings ===" -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
-        foreach ($warning in $script:__profileWarnings) {
-            Write-Host "  $warning" -ForegroundColor Yellow
+        $script:__profileWarnings | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+    }
+
+    # Errors added during this profile load only
+    $delta = $Error.Count - ($script:__profileErrorCountStart ?? 0)
+    if ($delta -le 0) { return }
+
+    $startupErrors = $Error[0..([Math]::Min(9, $delta - 1))]
+    $unique = @()
+    $seen = @{}
+    foreach ($err in $startupErrors) {
+        $msg = $err.Exception.Message
+        if ($msg -match '__zoxide_hooked') { continue }
+        if (-not $seen.ContainsKey($msg)) {
+            $seen[$msg] = $true
+            $unique += $err
         }
     }
 
-    # Show unique errors from $Error (limit to first 10)
-    $uniqueErrors = @()
-    $seenMessages = @{}
-    $errorCount = 0
-
-    foreach ($err in $Error) {
-        if ($errorCount -ge 10) { break }
-        $key = $err.Exception.Message
-
-        # FILTER: Skip known some errors that don't affect functionality
-        if ($key -match "Cannot find a variable with the name '__zoxide_hooked'") {
-            continue
-        }
-
-        if (-not $seenMessages.ContainsKey($key)) {
-            $seenMessages[$key] = $true
-            $uniqueErrors += $err
-            $errorCount++
-        }
-    }
-
-    if ($uniqueErrors.Count -gt 0) {
+    if ($unique.Count -gt 0) {
         Write-Host "`n=== Profile Startup Errors ===" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
-        foreach ($err in $uniqueErrors) {
-            $originInfo = if ($err.InvocationInfo.MyCommand) { " ($($err.InvocationInfo.MyCommand))" } else { "" }
-            Write-Host "  $($err.Exception.Message)$originInfo" -ForegroundColor Red
+        $unique | ForEach-Object {
+            $origin = if ($_.InvocationInfo.MyCommand) { " ($($_.InvocationInfo.MyCommand))" } else { "" }
+            Write-Host "  $($_.Exception.Message)$origin" -ForegroundColor Red
         }
     }
 }
@@ -1271,7 +1265,7 @@ if ($global:fastfetch) {
 }
 
 # Show startup diagnostics after fastfetch if any warnings/errors were captured
-if ($script:__profileWarnings.Count -gt 0 -or $Error.Count -gt 0) {
+if ($script:__profileWarnings.Count -gt 0 -or (($Error.Count - ($script:__profileErrorCountStart ?? 0)) -gt 0)) {
     Show-StartupDiagnostics
 }
 
