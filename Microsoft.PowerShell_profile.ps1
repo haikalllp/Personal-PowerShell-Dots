@@ -851,6 +851,15 @@ function update-colours {
             Write-Warning "Failed to sync Discord theme: $($_.Exception.Message)"
         }
 
+        # Sync Glazewm theme with the new color palette
+        try {
+            Write-Host "Syncing Glazewm theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            & "$PSScriptRoot\Scripts\sync_glazewm.ps1"
+            Write-Host "Glazewm theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+        } catch {
+            Write-Warning "Failed to sync Glazewm theme: $($_.Exception.Message)"
+        }
+
         # Reload yasb
         try {
             Write-Host "Reloading Yasb..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
@@ -863,7 +872,6 @@ function update-colours {
         Write-Warning "Failed to update terminal colors: $($_.Exception.Message)"
     }
 }
-
 #endregion
 
 
