@@ -828,17 +828,46 @@ function flushdns {
 # Functions to update terminal themes with pywal/winwal
 
 function update-colours {
-    param(
-        [Parameter(Position=0)]
-        [ValidateSet("haishoku", "colorz", "colorthief")]
-        [string]$Backend
-    )
+    # Display menu for backend selection
+    Write-Host "Select a color extraction backend:" -ForegroundColor (Get-ProfileColor 'UI' 'HelpTitle')
+    Write-Host "1. Default" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+    Write-Host "2. colorz" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+    Write-Host "3. colorthief" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+    Write-Host "4. haishoku" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+    Write-Host ""
 
-    # Update terminal colors using pywal/winwal with specified backend and refresh Oh My Posh
+    $choice = Read-Host "Enter your choice (1-4)"
+
+    # Process user selection
+    $backend = $null
+    switch ($choice) {
+        "1" {
+            Write-Host "Using default backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            $backend = $null
+        }
+        "2" {
+            Write-Host "Using colorz backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            $backend = "colorz"
+        }
+        "3" {
+            Write-Host "Using colorthief backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            $backend = "colorthief"
+        }
+        "4" {
+            Write-Host "Using haishoku backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            $backend = "haishoku"
+        }
+        default {
+            Write-Host "Invalid choice. Using default backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
+            $backend = $null
+        }
+    }
+
+    # Update terminal colors using pywal/winwal with selected backend and refresh Oh My Posh
     try {
-        if ($Backend) {
-            Write-Host "Updating terminal colors with $Backend backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-            Update-WalTheme -Backend $Backend
+        if ($backend) {
+            Write-Host "Updating terminal colors with $backend backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            Update-WalTheme -Backend $backend
         } else {
             Write-Host "Updating terminal colors..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
             Update-WalTheme
@@ -994,9 +1023,9 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (Z
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))zi$($PSStyle.Reset)                    - Interactive directory selection
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))THEME UTILITIES$($PSStyle.Reset)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colours$($PSStyle.Reset) [backend] - Update universal colour theme works with (terminal, yasb, better discord, glazewm, komorebi, pywalfox)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) no argument: normal Update-WalTheme
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) backends: haishoku, colorz, colorthief
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colours$($PSStyle.Reset) - Update universal colour theme following wallpaper colour with interactive menu
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Interactive menu to select backend: default, colorz, colorthief, haishoku
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Works with: terminal, yasb, glazewm, komorebi, better discord, pywalfox
 
 "@
 
