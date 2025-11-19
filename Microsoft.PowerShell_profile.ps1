@@ -359,6 +359,9 @@ function Get-PywalColors {
     }
 
     try {
+        # Fix JSON formatting first using centralized script
+        & "$PSScriptRoot\Scripts\fix_json_formatting.ps1" -ColorsPath $ColorsPath | Out-Null
+
         $colorsData = Get-Content -Path $ColorsPath -Raw | ConvertFrom-Json
         return $colorsData
     } catch {

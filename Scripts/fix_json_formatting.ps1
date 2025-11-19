@@ -17,7 +17,7 @@ if (Test-Path $ColorsPath) {
             $null = $content | ConvertFrom-Json
             # JSON is already valid, no need to modify
             Write-Verbose "JSON is already valid, no modifications needed"
-            return $true
+            return
         }
         catch {
             # JSON parsing failed, attempt to fix it
@@ -33,18 +33,18 @@ if (Test-Path $ColorsPath) {
             # Only write if the modified content is valid JSON
             Set-Content -Path $ColorsPath -Value $modifiedContent -NoNewline
             Write-Verbose "JSON formatting fixed and file updated"
-            return $true
+            return
         }
         catch {
             Write-Host "Failed to fix JSON formatting - modified content is still invalid" -ForegroundColor Red
-            return $false
+            return
         }
     }
     catch {
         Write-Host "Error occurred while fixing JSON formatting: $_" -ForegroundColor Red
-        return $false
+        return
     }
 } else {
     Write-Host "colors.json file not found at $ColorsPath" -ForegroundColor Red
-    return $false
+    return
 }

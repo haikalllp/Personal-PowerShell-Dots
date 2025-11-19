@@ -8,7 +8,7 @@ $walColorsPath = "$env:USERPROFILE\.cache\wal\colors.json"
 if (Test-Path $walColorsPath) {
     try {
         # Fix JSON formatting first using centralized script
-        & "$PSScriptRoot\fix_json_formatting.ps1" -ColorsPath $walColorsPath
+        & "$PSScriptRoot\fix_json_formatting.ps1" -ColorsPath $walColorsPath | Out-Null
 
         # Run pywalfox update
         pywalfox update

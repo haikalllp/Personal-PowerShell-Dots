@@ -9,7 +9,7 @@ $configPath = "$env:USERPROFILE\.config\komorebi\komorebi.json"
 if (Test-Path $walColorsPath) {
     try {
         # Fix JSON formatting first using centralized script
-        & "$PSScriptRoot\fix_json_formatting.ps1" -ColorsPath $walColorsPath
+        & "$PSScriptRoot\fix_json_formatting.ps1" -ColorsPath $walColorsPath | Out-Null
 
         # Now read the modified content as JSON
         $walContent = Get-Content $walColorsPath -Raw | ConvertFrom-Json
