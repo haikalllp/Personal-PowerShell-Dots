@@ -219,21 +219,15 @@ function Show-StartupDiagnostics {
 #================================================================================
 
 # Set all module paths
-$psModulesPath = Join-Path $HOME "Documents\PowerShell\Modules"
-$winPSModulesPath = Join-Path $HOME "Documents\WindowsPowerShell\Modules"
-$scoopModulesPath = Join-Path $HOME "scoop\modules"
+$modulePaths = @(
+    "$HOME\scoop\modules",
+    "$HOME\Documents\PowerShell\Modules",
+    "$HOME\Documents\WindowsPowerShell\Modules"
+)
 
-# Add to PSModulePath if not already present
-$currentModulePath = $env:PSModulePath -split ';'
-if ($scoopModulesPath -notin $currentModulePath) {
-    $env:PSModulePath = "$env:PSModulePath;$scoopModulesPath"
-}
-if ($psModulesPath -notin $currentModulePath) {
-    $env:PSModulePath = "$env:PSModulePath;$psModulesPath"
-}
-if ($winPSModulesPath -notin $currentModulePath) {
-    $env:PSModulePath = "$env:PSModulePath;$winPSModulesPath"
-}
+$existingPaths = $env:PSModulePath -split ';'
+$newPaths = $modulePaths | Where-Object { $_ -notin $existingPaths }
+if ($newPaths) { $env:PSModulePath = "$($env:PSModulePath);$($newPaths -join ';')" }
 
 #================================================================================
 # Core Helper Functions
@@ -259,37 +253,17 @@ $global:fastfetch = if (Test-CommandExists fastfetch) { 'fastfetch' } else { $nu
 #================================================================================
 
 function Validate-Dependencies {
-    $requiredCommands = @(
-        'oh-my-posh', 'zoxide', 'fzf', 'rg', 'fastfetch', 'nvim', 'fd'
-    )
-    $requiredModules = @(
-        'Terminal-Icons', 'winwal', 'PSFzf'
-    )
+    $requiredCommands = @('oh-my-posh', 'zoxide', 'fzf', 'rg', 'fastfetch', 'nvim', 'fd')
+    $requiredModules = @('Terminal-Icons', 'winwal', 'PSFzf')
 
-    $missingCommands = @()
-    $missingModules = @()
+    $missingCommands = $requiredCommands | Where-Object { -not (Test-CommandExists $_) }
+    $missingModules = $requiredModules | Where-Object { -not (Get-Module -ListAvailable -Name $_) }
 
-    foreach ($cmd in $requiredCommands) {
-        if (-not (Test-CommandExists $cmd)) {
-            $missingCommands += $cmd
-        }
-    }
-
-    foreach ($module in $requiredModules) {
-        if (-not (Get-Module -ListAvailable -Name $module)) {
-            $missingModules += $module
-        }
-    }
-
-    if ($missingCommands.Count -gt 0 -or $missingModules.Count -gt 0) {
-        Write-Host "Missing required dependencies:" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
-        if ($missingCommands.Count -gt 0) {
-            Write-Host "  Commands: $($missingCommands -join ', ')" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
-        }
-        if ($missingModules.Count -gt 0) {
-            Write-Host "  Modules: $($missingModules -join ', ')" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
-        }
-        Write-Host "Please install missing dependencies for full functionality." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
+    if ($missingCommands -or $missingModules) {
+        Write-Host "Missing dependencies:" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        if ($missingCommands) { Write-Host "  Commands: $($missingCommands -join ', ')" -ForegroundColor (Get-ProfileColor 'UI' 'Error') }
+        if ($missingModules) { Write-Host "  Modules: $($missingModules -join ', ')" -ForegroundColor (Get-ProfileColor 'UI' 'Error') }
+        Write-Host "Install missing dependencies for full functionality." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
     } else {
         Write-Host "All required dependencies are installed and available!" -ForegroundColor "Green"
     }
@@ -334,6 +308,7 @@ function Get-ProfileColor {
     # Return default color if not found
     return 'White'
 }
+
 
 #================================================================================
 # Pywal Color Integration
@@ -650,68 +625,38 @@ if (Test-CommandExists zoxide) {
 #================================================================================
 # Function to get the configured editor with proper fallback handling
 function Get-ConfiguredEditor {
-    try {
-        # Validate the DefaultEditor configuration
-        $validEditors = @("notepad", "neovim", "vscode")
-        if ($validEditors -notcontains $global:DefaultEditor) {
-            Add-ProfileWarning "Invalid DefaultEditor value: '$($global:DefaultEditor)'. Valid values are: $($validEditors -join ', '). Falling back to vscode."
-            $global:DefaultEditor = "vscode"
-        }
-
-        # Determine the editor command based on configuration
-        switch ($global:DefaultEditor) {
-            "notepad" {
-                if (Test-CommandExists notepad) {
-                    return 'notepad'
-                } else {
-                    Add-ProfileWarning "Notepad not found. Falling back to available editor."
-                    return Get-FallbackEditor
-                }
-            }
-            "neovim" {
-                if (Test-CommandExists nvim) {
-                    return 'nvim'
-                } elseif (Test-CommandExists nvim.exe) {
-                    return 'nvim.exe'
-                } else {
-                    Add-ProfileWarning "Neovim not found. Falling back to available editor."
-                    return Get-FallbackEditor
-                }
-            }
-            "vscode" {
-                if (Test-CommandExists code) {
-                    return 'code'
-                } else {
-                    Add-ProfileWarning "VS Code not found. Falling back to available editor."
-                    return Get-FallbackEditor
-                }
-            }
-            default {
-                Add-ProfileWarning "Unknown editor configuration: '$($global:DefaultEditor)'. Using fallback."
-                return Get-FallbackEditor
-            }
-        }
-    } catch {
-        Add-ProfileWarning "Error determining editor: $($_.Exception.Message). Using fallback."
-        return Get-FallbackEditor
+    $editorMap = @{
+        'notepad' = @('notepad')
+        'neovim'  = @('nvim', 'nvim.exe')
+        'vscode'  = @('code')
     }
+
+    # Validate configured editor
+    # fallback to notepad if invalid
+    if ($global:DefaultEditor -notin $editorMap.Keys) {
+        Add-ProfileWarning "Invalid editor '$($global:DefaultEditor)'. Using notepad."
+        $global:DefaultEditor = 'notepad'
+    }
+
+    # Test configured editor commands first
+    foreach ($cmd in $editorMap[$global:DefaultEditor]) {
+        if (Test-CommandExists $cmd) { return $cmd }
+    }
+
+    # Fallback to any available editor
+    Add-ProfileWarning "$($global:DefaultEditor) not found. Using available editor."
+    return Get-FallbackEditor
 }
 
 # Helper function to provide fallback editor selection
 function Get-FallbackEditor {
-    # Fallback chain: VS Code -> Neovim -> Notepad
-    if (Test-CommandExists code) {
-        return 'code'
-    } elseif (Test-CommandExists nvim) {
-        return 'nvim'
-    } elseif (Test-CommandExists nvim.exe) {
-        return 'nvim.exe'
-    } elseif (Test-CommandExists notepad) {
-        return 'notepad'
-    } else {
-        Add-ProfileWarning "No suitable editor found. Please install VS Code, Neovim, or ensure Notepad is available."
-        return 'notepad'  # Last resort, will likely fail but provides a consistent behavior
+    $fallbackChain = @('code', 'nvim', 'nvim.exe', 'notepad')
+    foreach ($editor in $fallbackChain) {
+        if (Test-CommandExists $editor) { return $editor }
     }
+
+    Add-ProfileWarning "No suitable editor found. Please install VS Code, Neovim, or ensure Notepad is available."
+    return 'notepad'  # Last resort
 }
 
 # Set the EDITOR environment variable using the configured editor
@@ -875,31 +820,18 @@ if ($psfzfAvailable) {
 #region Basic Utilities
 # Cross-platform utility functions for common operations
 
-function touch([string]$file) {
-    # Create an empty file or update timestamp if file exists
-    "" | Out-File -FilePath $file -Encoding UTF8 -Force
-}
+function touch([string]$file) { "" | Out-File $file -Encoding UTF8 -Force }
 
-function which($name) {
-    # Show the full path of a command
-    (Get-Command $name -ErrorAction SilentlyContinue | Select-Object -First 1).Definition
-}
+function which($name) { (Get-Command $name -EA 0 | Select-Object -First 1).Definition }
 
 function whereis([string]$Command) {
-    # Show all locations where a command is found
-    $paths = $env:Path -split ';' | Where-Object { $_ -ne '' }
-    $extensions = $env:PATHEXT -split ';'
-    $found = @()
-    foreach ($path in $paths) {
-        if (-not (Test-Path $path)) { continue }
-        $base = Join-Path $path $Command
-        if (Test-Path $base) { $found += $base }
-        foreach ($ext in $extensions) {
-            $p = "$base$ext"
-            if (Test-Path $p) { $found += $p }
+    $env:Path -split ';' | Where-Object { $_ -and (Test-Path $_) } | ForEach-Object {
+        $base = Join-Path $_ $Command
+        if (Test-Path $base) { $base }
+        $env:PATHEXT -split ';' | ForEach-Object {
+            $p = "$base$_"; if (Test-Path $p) { $p }
         }
-    }
-    $found | Sort-Object -Unique
+    } | Sort-Object -Unique
 }
 #endregion
 
@@ -1287,28 +1219,17 @@ function flushdns {
 function update-colors {
     param(
         [Parameter(Position=0)]
-        [string]$Backend = $null,
-        [Parameter()]
+        [string]$Backend,
         [Alias('b')]
-        [string]$BackendAlias = $null
+        [string]$BackendAlias
     )
 
-    # Debug output to help troubleshoot
-    Write-Verbose "update-colors called with Backend parameter: '$Backend', BackendAlias: '$BackendAlias'"
-
-    # Process backend selection
-    $backend = $null
-    # More robust parameter detection
-    Write-Verbose "Backend parameter type: $($Backend.GetType().Name), value: '$Backend'"
-    Write-Verbose "BackendAlias parameter type: $($BackendAlias.GetType().Name), value: '$BackendAlias'"
-
-    # Use BackendAlias if Backend is null (for -b parameter)
+    # Simplified backend selection
+    $backendMap = @{ '1' = $null; '2' = 'colorz'; '3' = 'colorthief'; '4' = 'haishoku' }
+    $validBackends = @('default', 'colorz', 'colorthief', 'haishoku')
     $selectedBackend = if ([string]::IsNullOrEmpty($Backend) -and -not [string]::IsNullOrEmpty($BackendAlias)) { $BackendAlias } else { $Backend }
 
-    Write-Verbose "Selected backend: '$selectedBackend'"
-
-    if ($null -eq $selectedBackend -or [string]::IsNullOrEmpty($selectedBackend)) {
-        # Display menu for backend selection
+    if (-not $selectedBackend) {
         Write-Host "Select a color extraction backend:" -ForegroundColor (Get-ProfileColor 'UI' 'HelpTitle')
         Write-Host "1. Default" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
         Write-Host "2. colorz" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
@@ -1317,42 +1238,19 @@ function update-colors {
         Write-Host ""
 
         $choice = Read-Host "Enter your choice (1-4)"
+        $backendMap = @{ '1' = $null; '2' = 'colorz'; '3' = 'colorthief'; '4' = 'haishoku' }
+        $backend = if ($backendMap.ContainsKey($choice)) { $backendMap[$choice] } else { $null }
 
-        switch ($choice) {
-            "1" {
-                Write-Host "Using default backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-                $backend = $null
-            }
-            "2" {
-                Write-Host "Using colorz backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-                $backend = "colorz"
-            }
-            "3" {
-                Write-Host "Using colorthief backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-                $backend = "colorthief"
-            }
-            "4" {
-                Write-Host "Using haishoku backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-                $backend = "haishoku"
-            }
-            default {
-                Add-ProfileWarning "Invalid choice. Using default backend..."
-                $backend = $null
-            }
-        }
+        $backendNames = @{ '1' = 'Default'; '2' = 'colorz'; '3' = 'colorthief'; '4' = 'haishoku' }
+        $selectedName = if ($backendNames.ContainsKey($choice)) { $backendNames[$choice] } else { 'Default' }
+        Write-Host "Using $selectedName backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+    } elseif ($selectedBackend -in $validBackends) {
+        $backend = if ($selectedBackend -eq 'default') { $null } else { $selectedBackend }
+        Write-Host "Using $(if ($backend) { $backend } else { 'default' }) backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
     } else {
-        # Validate the provided backend parameter
-        $validBackends = @("default", "colorz", "colorthief", "haishoku")
-        if ($Backend -notin $validBackends) {
-            Add-ProfileWarning "Invalid backend '$Backend'. Valid options are: $($validBackends -join ', '). Using default backend..."
-            $backend = $null
-        } elseif ($Backend -eq "default") {
-            Write-Host "Using default backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-            $backend = $null
-        } else {
-            Write-Host "Using $Backend backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-            $backend = $Backend
-        }
+        Add-ProfileWarning "Invalid backend '$selectedBackend'. Using default."
+        $backend = $null
+        Write-Host "Using default backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
     }
 
     # Update universal colors using pywal/winwal with selected backend
