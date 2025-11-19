@@ -81,7 +81,7 @@ $env:FZF_DEFAULT_OPTS = @($base, $colorOpt) -join ' ' -replace '\s+', ' '
 $env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
 
 # Show success message for color sync
-Write-Host "FZF colors synced with theme" -ForegroundColor Green
+Write-Host "FZF Colors Loaded" -ForegroundColor Green
 
 if ($Print) {
     Write-Host "FZF_DEFAULT_OPTS: $($env:FZF_DEFAULT_OPTS)"

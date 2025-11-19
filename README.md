@@ -49,7 +49,6 @@ This repository contains a highly customized PowerShell profile (`Microsoft.Powe
 - **Fastfetch**: System information display tool
 - **Zoxide**: Smart directory navigation with fuzzy search
 - **FZF**: Fuzzy finder for files and command history
-- **PSFzf**: PowerShell integration for FZF
 - **fd**: Fast file finder
 - **ripgrep**: Fast text search integration
 - **Neovim**: Modern text editor
@@ -82,7 +81,6 @@ winget install sharkdp.fd
 ### PowerShell Modules
 ```powershell
 Install-Module -Name Terminal-Icons -Repository PSGallery
-Install-Module -Name PSFzf -Scope CurrentUser -Force
 ```
 
 ### Pywal/winwal Setup
