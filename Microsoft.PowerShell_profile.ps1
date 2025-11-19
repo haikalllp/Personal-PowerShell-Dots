@@ -269,19 +269,52 @@ function Validate-Dependencies {
     }
 }
 
+# Dependency validation lazy loading
+$global:__dependency_validation_done = $false
+function Initialize-DependencyValidation {
+    # Lazy load dependency validation only when needed
+    if ($global:__dependency_validation_done) { return }
+
+    try {
+        Validate-Dependencies
+        $global:__dependency_validation_done = $true
+    } catch {
+        Write-Verbose "Failed to validate dependencies: $($_.Exception.Message)"
+    }
+}
+
 #================================================================================
 # Module Initialization
 #================================================================================
 
-# Run dependency validation
-Validate-Dependencies
+# Set up lazy loading for winwal module
+$global:__winwal_init_done = $false
+function Initialize-Winwal {
+    # Lazy load winwal module only when theme functions are first used
+    if ($global:__winwal_init_done) { return }
 
-# Import winwal module with error handling
-try {
-    Import-Module winwal -ErrorAction Stop
-} catch {
-    Add-ProfileWarning "Failed to import winwal module: $($_.Exception.Message)"
-    Write-Host "Please ensure winwal is installed: git clone https://github.com/scaryrawr/winwal `"$($HOME)\Documents\PowerShell\Modules\winwal`"" -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+    try {
+        Import-Module winwal -ErrorAction Stop
+        $global:__winwal_init_done = $true
+    } catch {
+        Add-ProfileWarning "Failed to import winwal module: $($_.Exception.Message)"
+        Write-Host "Please ensure winwal is installed: git clone https://github.com/scaryrawr/winwal `"$($HOME)\Documents\PowerShell\Modules\winwal`"" -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+    }
+}
+
+# FZF color sync lazy loading
+$global:__fzf_sync_init_done = $false
+function Initialize-FZFColors {
+    # Lazy load FZF color sync only when needed
+    if ($global:__fzf_sync_init_done) { return }
+
+    try {
+        & "$PSScriptRoot\Scripts\sync_fzf.ps1"
+        $global:__fzf_sync_init_done = $true
+        Write-Verbose "FZF colors synced successfully"
+    } catch {
+        Write-Verbose "Failed to sync FZF colors: $($_.Exception.Message)"
+    }
 }
 #endregion
 
@@ -601,6 +634,8 @@ if (Test-CommandExists zoxide) {
         # Jump to a directory using interactive search.
         # Simple implementation using zoxide's built-in fzf integration
         function global:__zoxide_zi {
+            # Initialize FZF colors on first use
+            Initialize-FZFColors
             $result = __zoxide_bin query -i -- @args
             if ($LASTEXITCODE -eq 0) {
                 __zoxide_cd $result $true
@@ -758,9 +793,6 @@ if (Test-CommandExists Set-PSReadLineOption) {
         return ($null -eq $hasSensitive)
     }
 }
-
-# Sync fzf colors with pywal theme
-& "$PSScriptRoot\Scripts\sync_fzf.ps1"
 #endregion
 
 #region PSFzf (Fuzzy Finder) Integration
@@ -777,12 +809,16 @@ if (-not $env:_ZO_FZF_OPTS) {
     $env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
 }
 
-# Check if PSFzf module is available
-$psfzfAvailable = Get-Module -ListAvailable -Name PSFzf
+# Set up lazy loading for PSFzf module
+$global:__psfzf_init_done = $false
 
-if ($psfzfAvailable) {
+function Initialize-PSFzf {
+    # Lazy load PSFzf module only when first used
+    if ($global:__psfzf_init_done) { return }
+
+    if (-not (Get-Module -ListAvailable -Name PSFzf)) { return }
+
     try {
-        # Import PSFzf module
         Import-Module PSFzf -ErrorAction Stop
 
         # Set key bindings for fzf
@@ -791,15 +827,52 @@ if ($psfzfAvailable) {
         # Use fd as the default file searcher for fzf if available
         if (Test-CommandExists fd) {
             Set-PsFzfOption -EnableFd:$true
-            # Set FZF_DEFAULT_COMMAND to use fd with appropriate options, including hidden files but excluding .git and other ignored files
-            # Use --base-directory to ensure fd returns relative paths from current directory, preventing path duplication
             $env:FZF_DEFAULT_COMMAND = 'fd --hidden --exclude .git'
         }
+
+        $global:__psfzf_init_done = $true
         Write-Verbose "PSFzf module loaded successfully with key bindings: Ctrl+t (directory provider), Ctrl+r (history search)"
 
     } catch {
         Add-ProfileWarning "Failed to import PSFzf module: $($_.Exception.Message)"
         Add-ProfileWarning "Install PSFzf with: Install-Module -Name PSFzf -Scope CurrentUser -Force"
+    }
+}
+
+# Check if PSFzf module is available
+$psfzfAvailable = Get-Module -ListAvailable -Name PSFzf
+
+if ($psfzfAvailable) {
+    # Set up key handlers that will trigger PSFzf initialization on first use
+    function Invoke-PSFzfProvider {
+        Initialize-PSFzf
+        # Now call the actual provider function
+        Invoke-PSFzfProvider @args
+    }
+
+    function Invoke-PSFzfHistory {
+        Initialize-PSFzf
+        # Now call the actual history function
+        Invoke-PSFzfHistory @args
+    }
+
+    # Set up PSReadLine handlers for lazy loading
+    try {
+        Set-PSReadLineKeyHandler -Key 'Ctrl+t' -ScriptBlock {
+            # Initialize PSFzf and FZF colors on first use
+            Initialize-PSFzf
+            Initialize-FZFColors
+            [Microsoft.PowerShell.PSConsoleReadLine]::InvokeChord('Ctrl+t')
+        }
+        Set-PSReadLineKeyHandler -Key 'Ctrl+r' -ScriptBlock {
+            # Initialize PSFzf and FZF colors on first use
+            Initialize-PSFzf
+            Initialize-FZFColors
+            [Microsoft.PowerShell.PSConsoleReadLine]::InvokeChord('Ctrl+r')
+        }
+    } catch {
+        # PSReadLine not available
+        Write-Verbose "PSReadLine not available for PSFzf integration"
     }
 } else {
     Add-ProfileWarning "PSFzf module not found. Install with: Install-Module -Name PSFzf -Scope CurrentUser -Force"
@@ -808,8 +881,7 @@ if ($psfzfAvailable) {
     if (Test-CommandExists fzf) {
         Add-ProfileWarning "Basic fzf command detected but PSFzf module not installed. Install PSFzf for full integration."
 
-        # Set basic FZF_DEFAULT_COMMAND if fd is available, including hidden files but excluding .git and other ignored files
-        # Use --base-directory to ensure fd returns relative paths from current directory, preventing path duplication
+        # Set basic FZF_DEFAULT_COMMAND if fd is available
         if (Test-CommandExists fd) {
             $env:FZF_DEFAULT_COMMAND = 'fd --hidden --exclude .git'
         }
@@ -1256,6 +1328,9 @@ function update-colors {
     # Update universal colors using pywal/winwal with selected backend
     try {
         # Sync Windows Terminal Color Scheme
+        # Initialize winwal module before using theme functions
+        Initialize-Winwal
+
         if ($backend) {
             Write-Host "Updating Windows Terminal colors scheme with $backend backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
             Update-WalTheme -Backend $backend
@@ -1273,9 +1348,9 @@ function update-colors {
                 Initialize-DynamicPSColors
                 Write-Host "PSReadLine colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
 
-                # Update fzf colors to match the new pywal/winwal theme
+                # Update fzf colors to match the new pywal/winwal theme (lazy load)
                 Write-Host "Updating fzf colors..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-                & "$PSScriptRoot\Scripts\sync_fzf.ps1"
+                Initialize-FZFColors
                 Write-Host "fzf colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
                 Add-ProfileWarning "Failed to update PSReadLine colors: $($_.Exception.Message)"
