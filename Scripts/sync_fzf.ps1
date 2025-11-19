@@ -13,10 +13,14 @@ $walPath = "$env:USERPROFILE\.cache\wal\colors.json"
 $wal = $null
 if (-not $FromStatic -and (Test-Path -LiteralPath $walPath)) {
     try {
-        # Fix JSON formatting first
+        # Attempt to fix JSON formatting if needed (the script is idempotent)
         & "$PSScriptRoot\fix_json_formatting.ps1" -ColorsPath $walPath
+
+        # Parse the JSON after potential fixing
         $wal = Get-Content -Path $walPath -Raw | ConvertFrom-Json
     } catch {
+        # If parsing still fails, use static fallback
+        Write-Verbose "Failed to parse colors.json, using static fallback"
         $wal = $null
     }
 }

@@ -672,7 +672,7 @@ if (Test-CommandExists Set-PSReadLineOption) {
     }
     Set-PSReadLineOption @PSReadLineOptions
 
-    # Additional options for enhanced functionality (with version compatibility check)
+    # Add prediction from both history and plugins if supported
     try {
         Set-PSReadLineOption -PredictionSource HistoryAndPlugin -MaximumHistoryCount 10000
     } catch {
