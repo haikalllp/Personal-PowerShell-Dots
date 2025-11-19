@@ -39,7 +39,7 @@
 # rm -Path "$HOME\Documents\PowerShell\Modules\winwal\.git" -r -fo
 # winget install imagemagick.imagemagick
 # winget install Python.Python.3.13
-# pip install pywal colorthief colorz haishoku
+# pip install pywal16 colorthief colorz haishoku
 #
 #================================================================================
 # Optional Dependencies:
@@ -63,7 +63,7 @@ $global:WindowTilingManager = "glazewm"
 # Optional Theme Sync Configuration
 # Set to $true if you have the corresponding application installed and want theme sync
 $global:UseYasb = $true            # Set to $true if using Yasb
-$global:UseBetterDiscord = $true   # Set to $true if using BetterDiscord
+$global:UseBetterDiscord = $false   # Set to $true if using BetterDiscord
 $global:UsePywalfox = $true        # Set to $true if using Pywalfox
 
 # Startup Diagnostics Configuration
