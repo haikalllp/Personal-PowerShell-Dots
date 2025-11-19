@@ -1,3 +1,4 @@
+#region Header & Documentation
 #================================================================================
 # PowerShell Profile
 # Author: haikalllp
@@ -50,6 +51,7 @@
 # - BetterDiscord (https://betterdiscord.app/) - Themed Discord client
 # - Pywalfox (https://github.com/Frewacom/pywalfox) - Firefox theme sync with pywal
 #================================================================================
+#endregion
 
 
 #region User Configurations
@@ -157,15 +159,21 @@ $global:PSColors = @{
 #!
 #! ================================================================================
 
+#region Environment Setup & Diagnostics
 #================================================================================
-# CORE PROFILE LOGIC
+# CORE PROFILE LOGIC - Environment initialization and diagnostics system
 #================================================================================
 
+#================================================================================
 # Startup Diagnostics System
 #================================================================================
 # Capture warnings during profile loading to display after fastfetch
 $script:__profileWarnings = @()
 $script:__profileErrorCountStart = $Error.Count
+
+#================================================================================
+# Diagnostics Functions
+#================================================================================
 
 function Add-ProfileWarning {
     param([string]$Message)
@@ -206,6 +214,10 @@ function Show-StartupDiagnostics {
     }
 }
 
+#================================================================================
+# Module Path Configuration
+#================================================================================
+
 # Set all module paths
 $psModulesPath = Join-Path $HOME "Documents\PowerShell\Modules"
 $winPSModulesPath = Join-Path $HOME "Documents\WindowsPowerShell\Modules"
@@ -223,7 +235,10 @@ if ($winPSModulesPath -notin $currentModulePath) {
     $env:PSModulePath = "$env:PSModulePath;$winPSModulesPath"
 }
 
-# Helper function to test if a command exists
+#================================================================================
+# Core Helper Functions
+#================================================================================
+
 function Test-CommandExists {
     param([string]$Command)
     try {
@@ -239,7 +254,10 @@ function Test-CommandExists {
 # Check if fastfetch is available and use the same reference everywhere
 $global:fastfetch = if (Test-CommandExists fastfetch) { 'fastfetch' } else { $null }
 
-# Validate required dependencies and provide clear error messages
+#================================================================================
+# Dependency Validation System
+#================================================================================
+
 function Validate-Dependencies {
     $requiredCommands = @(
         'oh-my-posh', 'zoxide', 'fzf', 'rg', 'fastfetch', 'nvim', 'fd'
@@ -277,6 +295,10 @@ function Validate-Dependencies {
     }
 }
 
+#================================================================================
+# Module Initialization
+#================================================================================
+
 # Run dependency validation
 Validate-Dependencies
 
@@ -287,11 +309,17 @@ try {
     Add-ProfileWarning "Failed to import winwal module: $($_.Exception.Message)"
     Write-Host "Please ensure winwal is installed: git clone https://github.com/scaryrawr/winwal `"$($HOME)\Documents\PowerShell\Modules\winwal`"" -ForegroundColor (Get-ProfileColor 'UI' 'Info')
 }
+#endregion
 
-#region Helper Functions
+#region Color & Theme System
+#================================================================================
+# DYNAMIC COLOR MANAGEMENT - Pywal integration and color utilities
 #================================================================================
 
-# Helper function to get colors by category and name
+#================================================================================
+# Color Helper Functions
+#================================================================================
+
 function Get-ProfileColor {
     param(
         [string]$Category,
@@ -306,9 +334,9 @@ function Get-ProfileColor {
     # Return default color if not found
     return 'White'
 }
-#endregion
 
-#region Pywal Color Integration
+#================================================================================
+# Pywal Color Integration
 #================================================================================
 # Functions to integrate pywal colors with PSReadLine syntax highlighting
 
@@ -412,9 +440,10 @@ function Initialize-DynamicPSColors {
         }
     }
 }
-#endregion
 
-#region Theme and Appearance
+#================================================================================
+# Theme and Appearance Configuration
+#================================================================================
 
 # Set Oh My Posh configuration based on user preference
 if ($global:OhMyPoshThemeMode -eq 'remote') {
@@ -469,16 +498,21 @@ function Initialize-OhMyPosh {
 }
 #endregion
 
-#region Command Line Tools
 
+#region Core Tool Integration
+#================================================================================
+# COMMAND LINE TOOLS - Zoxide, Editor configuration, and prompt management
+#================================================================================
+
+#================================================================================
 # Zoxide Directory Jumper Configuration
+#================================================================================
 # Initialize zoxide for smart directory navigation and aliases
 if (Test-CommandExists zoxide) {
     try {
         # =============================================================================
-        #
-        # Utility functions for zoxide.
-        #
+        # Zoxide Utility Functions
+        # =============================================================================
 
         # Call zoxide binary, returning the output as UTF-8.
         function global:__zoxide_bin {
@@ -518,9 +552,8 @@ if (Test-CommandExists zoxide) {
         }
 
         # =============================================================================
-        #
-        # Hook configuration for zoxide.
-        #
+        # Zoxide Hook Configuration
+        # =============================================================================
 
         # Hook to add new entries to the database.
         $global:__zoxide_oldpwd = __zoxide_pwd
@@ -562,9 +595,8 @@ if (Test-CommandExists zoxide) {
         }
 
         # =============================================================================
-        #
-        # When using zoxide with --no-cmd, alias these internal functions as desired.
-        #
+        # Zoxide Navigation Functions
+        # =============================================================================
 
         # Jump to a directory using only keywords.
         function global:__zoxide_z {
@@ -601,9 +633,8 @@ if (Test-CommandExists zoxide) {
         }
 
         # =============================================================================
-        #
-        # Commands for zoxide. Disable these using --no-cmd.
-        #
+        # Zoxide Aliases
+        # =============================================================================
 
         Set-Alias -Name z -Value __zoxide_z -Option AllScope -Scope Global -Force
         Set-Alias -Name zi -Value __zoxide_zi -Option AllScope -Scope Global -Force
@@ -614,7 +645,9 @@ if (Test-CommandExists zoxide) {
     Write-Verbose "zoxide not found in PATH; skipping zoxide setup."
 }
 
+#================================================================================
 # Editor Configuration
+#================================================================================
 # Function to get the configured editor with proper fallback handling
 function Get-ConfiguredEditor {
     try {
