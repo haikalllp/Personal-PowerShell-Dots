@@ -37,16 +37,16 @@ if (Test-Path $configPath) {
 }
 
 # Store current colors for comparison
-$previousSingle = $currentConfig.border_colours.single
-$previousStack = $currentConfig.border_colours.stack
-$previousMonocle = $currentConfig.border_colours.monocle
-$previousUnfocused = $currentConfig.border_colours.unfocused
+$previousSingle = $currentConfig.border_colors.single
+$previousStack = $currentConfig.border_colors.stack
+$previousMonocle = $currentConfig.border_colors.monocle
+$previousUnfocused = $currentConfig.border_colors.unfocused
 
 # Update the border colors
-$currentConfig.border_colours.single = $color4
-$currentConfig.border_colours.stack = $color6
-$currentConfig.border_colours.monocle = $color4
-$currentConfig.border_colours.unfocused = $color0
+$currentConfig.border_colors.single = $color4
+$currentConfig.border_colors.stack = $color6
+$currentConfig.border_colors.monocle = $color4
+$currentConfig.border_colors.unfocused = $color0
 
 # Convert back to JSON and write to file
 $currentConfig | ConvertTo-Json -Depth 10 | Set-Content $configPath

@@ -280,12 +280,12 @@ $global:PSColors = @{
 
 Update your universal theme with dynamic colors based on your wallpaper:
 ```powershell
-update-colours
+update-colors
 ```
 
 This command will show:
 ```powershell
-update-colours
+update-colors
 Select a color extraction backend:
 1. Default
 2. colorz

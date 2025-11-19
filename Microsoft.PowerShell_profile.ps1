@@ -93,7 +93,7 @@ $ompRemote  = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/
 
 
 #=================================================================================
-# Centralized colour configuration for PSStyles and PSReadLineOptions
+# Centralized color configuration for PSStyles and PSReadLineOptions
 # Modify Powershell colors here
 
 # Dynamic PSReadLine/PSStyle Colors from Pywal/winwal
@@ -303,7 +303,7 @@ function Get-ProfileColor {
         return $global:PSColors[$Category][$Name]
     }
 
-    # Return default colour if not found
+    # Return default color if not found
     return 'White'
 }
 #endregion
@@ -1251,7 +1251,7 @@ function flushdns {
 #region Theme Utilities
 # Functions to update terminal themes with pywal/winwal
 
-function update-colours {
+function update-colors {
     param(
         [Parameter(Position=0)]
         [string]$Backend = $null,
@@ -1261,7 +1261,7 @@ function update-colours {
     )
 
     # Debug output to help troubleshoot
-    Write-Verbose "update-colours called with Backend parameter: '$Backend', BackendAlias: '$BackendAlias'"
+    Write-Verbose "update-colors called with Backend parameter: '$Backend', BackendAlias: '$BackendAlias'"
 
     # Process backend selection
     $backend = $null
@@ -1363,7 +1363,7 @@ function update-colours {
             Write-Host "Oh My Posh not found, skipping theme refresh." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
         }
 
-        # Sync Discord theme with the new colour palette (only if BetterDiscord is enabled)
+        # Sync Discord theme with the new color palette (only if BetterDiscord is enabled)
         if ($global:UseBetterDiscord) {
             try {
                 Write-Host "Syncing Discord theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
@@ -1377,7 +1377,7 @@ function update-colours {
 
         # Sync window tiling manager theme based on global variable
         if ($global:WindowTilingManager -eq "glazewm") {
-            # Sync Glazewm theme with the new colour palette
+            # Sync Glazewm theme with the new color palette
             try {
                 Write-Host "Syncing Glazewm theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
                 $glazewmScript = Join-Path $PSScriptRoot "Scripts\sync_glazewm.ps1"
@@ -1388,7 +1388,7 @@ function update-colours {
             }
         }
         elseif ($global:WindowTilingManager -eq "komorebi") {
-            # Sync Komorebi theme with the new colour palette
+            # Sync Komorebi theme with the new color palette
             try {
                 Write-Host "Syncing Komorebi theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
                 $komorebiScript = Join-Path $PSScriptRoot "Scripts\sync_komorebi.ps1"
@@ -1406,7 +1406,7 @@ function update-colours {
             Add-ProfileWarning "Invalid WindowTilingManager value: '$($global:WindowTilingManager)'. Expected 'komorebi', 'glazewm', or 'none'."
         }
 
-        # Sync Pywalfox theme with the new colour palette (only if Pywalfox is enabled)
+        # Sync Pywalfox theme with the new color palette (only if Pywalfox is enabled)
         if ($global:UsePywalfox) {
             try {
                 Write-Host "Syncing Pywalfox theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
@@ -1418,7 +1418,7 @@ function update-colours {
             }
         }
 
-        # Sync Cava theme with the new colour palette (only if Cava is enabled)
+        # Sync Cava theme with the new color palette (only if Cava is enabled)
         if ($global:UseCava) {
             try {
                 Write-Host "Syncing Cava theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
@@ -1430,7 +1430,7 @@ function update-colours {
             }
         }
 
-        # Reload yasb with the new colour palette (if enabled)
+        # Reload yasb with the new color palette (if enabled)
         if ($global:UseYasb) {
             try {
                 Write-Host "Reloading Yasb..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
@@ -1442,7 +1442,7 @@ function update-colours {
         }
 
     } catch {
-        Add-ProfileWarning "Failed to update colours: $($_.Exception.Message)"
+        Add-ProfileWarning "Failed to update colors: $($_.Exception.Message)"
     }
 }
 
@@ -1516,9 +1516,9 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (Z
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))zi$($PSStyle.Reset)                    - Interactive directory selection
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))THEME UTILITIES$($PSStyle.Reset)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colours$($PSStyle.Reset) [backend] - Update universal colour theme following wallpaper colour
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colors$($PSStyle.Reset) [backend] - Update universal color theme following wallpaper color
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Parameters: default, colorz, colorthief, haishoku (or no parameter for interactive menu)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Examples: update-colours, update-colours -b colorz, update-colours -b haishoku
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Examples: update-colors, update-colors -b colorz, update-colors -b haishoku
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Works with: Terminal, PSReadLine, Yasb, GlazeWM, Komorebi, Better Discord, Pywalfox, Cava.
 
 "@
