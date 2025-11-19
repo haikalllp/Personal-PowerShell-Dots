@@ -264,6 +264,8 @@ function Validate-Dependencies {
             Write-Host "  Modules: $($missingModules -join ', ')" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
         }
         Write-Host "Please install missing dependencies for full functionality." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
+    } else {
+        Write-Host "All required dependencies are installed and available!" -ForegroundColor "Green"
     }
 }
 

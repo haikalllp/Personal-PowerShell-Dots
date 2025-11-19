@@ -33,6 +33,8 @@ This repository contains a highly customized PowerShell profile (`Microsoft.Powe
 - Process management utilities
 - Network utilities
 
+---
+
 ## Installation
 
 ### Prerequisites
@@ -141,7 +143,7 @@ After installing the dependencies, set up the PowerShell profile:
    - Customize color mappings
    - > See the [Configuration](#configuration) section below for details.
 
-1. Restart PowerShell to load the new profile after configuration.
+4. Restart PowerShell to load the new profile after configuration.
    ```powershell
    # reload profile
    . $PROFILE
@@ -192,8 +194,13 @@ $global:OhMyPoshThemeMode = "local"
 # You can generate a winwal oh-my-posh theme with winwal:
 # Update-WalTheme; . $PROFILE
 $ompLocal   = Join-Path $HOME ".cache\wal\posh-wal-agnoster.omp.json"
+```
 
-# Fallback to normal remote theme if local custom theme not found (using raw URL)
+```powershell
+# If you want to use a remote theme from Oh My Posh repository instead
+$global:OhMyPoshThemeMode = "remote"
+
+# Set the remote Oh My Posh Theme URL
 $ompRemote  = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/1_shell.omp.json"
 ```
 
