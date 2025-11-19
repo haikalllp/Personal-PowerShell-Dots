@@ -15,6 +15,7 @@ This repository contains a highly customized PowerShell profile (`Microsoft.Powe
   - PowerShell (PSReadLine syntax highlighting and PSStyles)
   - Oh My Posh prompt theme
   - FZF fuzzy finder
+  - Cava audio visualizer
   - GlazeWM window manager
   - Komorebi window manager
   - BetterDiscord
@@ -102,6 +103,7 @@ winget install imagemagick.imagemagick
 - **GlazeWM**: Window tiling manager
 - **Komorebi**: Alternative window tiling manager
 - **YASB**: Windows status bar
+- **Cava**: Console-based audio visualizer
 - **BetterDiscord**: Enhanced Discord client
 - **Pywalfox**: Firefox theme sync
 
@@ -167,15 +169,19 @@ $global:DefaultEditor = "vscode"
 
 # Window Tiling Manager Configuration
 # Valid values: "komorebi", "glazewm", "none"
+# Only one should be active at a time
 $global:WindowTilingManager = "glazewm"
 
 # Optional Theme Sync Configuration
+# Set to $true if you have the corresponding application installed and want theme sync
 $global:UseYasb = $true             # Set to $true if using Yasb
+$global:UseCava = $true             # Set to $true if using Cava
 $global:UseBetterDiscord = $false   # Set to $true if using BetterDiscord
-$global:UsePywalfox = $false        # Set to $true if using Pywalfox
+$global:UsePywalfox = $true         # Set to $true if using Pywalfox
 
 # Startup Diagnostics Configuration
-$global:ClearOnStartup = $true     # Set to $false to prevent Clear-Host during startup
+# Set to $false to prevent Clear-Host from clearing warnings/errors during startup
+$global:ClearOnStartup = $true
 ```
 
 ### Oh My Posh Themes Configuration
@@ -306,6 +312,7 @@ Enter your choice (1-4):
 ##### Optional Syncs with:
 - GlazeWM (optional)
 - Komorebi (optional)
+- Cava (optional)
 - BetterDiscord (optional)
 - Pywalfox (optional)
 - YASB status bar (optional)

@@ -46,6 +46,7 @@
 # - GlazewM (https://github.com/glzr-io/glazewm) - Window tiling manager
 # - Komorebi (https://github.com/LGUG2Z/komorebi) - Alternative window tiling manager
 # - Yasb (https://github.com/amnweb/yasb) - Windows Top Status bar
+# - Cava (https://github.com/karlstav/cava) - Console-based Audio Visualizer
 # - BetterDiscord (https://betterdiscord.app/) - Themed Discord client
 # - Pywalfox (https://github.com/Frewacom/pywalfox) - Firefox theme sync with pywal
 #================================================================================
@@ -68,8 +69,9 @@ $global:WindowTilingManager = "glazewm"
 # Optional Theme Sync Configuration
 # Set to $true if you have the corresponding application installed and want theme sync
 $global:UseYasb = $true             # Set to $true if using Yasb
+$global:UseCava = $true             # Set to $true if using Cava
 $global:UseBetterDiscord = $false   # Set to $true if using BetterDiscord
-$global:UsePywalfox = $false        # Set to $true if using Pywalfox
+$global:UsePywalfox = $true         # Set to $true if using Pywalfox
 
 # Startup Diagnostics Configuration
 # Set to $false to prevent Clear-Host from clearing warnings/errors during startup
@@ -1416,6 +1418,18 @@ function update-colours {
             }
         }
 
+        # Sync Cava theme with the new colour palette (only if Cava is enabled)
+        if ($global:UseCava) {
+            try {
+                Write-Host "Syncing Cava theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                $cavaScript = Join-Path $PSScriptRoot "Scripts\sync_cava.ps1"
+                & $cavaScript
+                Write-Host "Cava theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            } catch {
+                Add-ProfileWarning "Failed to sync Cava theme: $($_.Exception.Message)"
+            }
+        }
+
         # Reload yasb with the new colour palette (if enabled)
         if ($global:UseYasb) {
             try {
@@ -1504,8 +1518,8 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (Z
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))THEME UTILITIES$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colours$($PSStyle.Reset) [backend] - Update universal colour theme following wallpaper colour
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Parameters: default, colorz, colorthief, haishoku (or no parameter for interactive menu)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Examples: update-colours, update-colours colorz, update-colours haishoku
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Works with: Terminal, PSReadLine, Yasb, GlazeWM, Komorebi, Better Discord, Pywalfox.
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Examples: update-colours, update-colours -b colorz, update-colours -b haishoku
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Works with: Terminal, PSReadLine, Yasb, GlazeWM, Komorebi, Better Discord, Pywalfox, Cava.
 
 "@
 
