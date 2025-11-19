@@ -27,8 +27,8 @@ if (-not $FromStatic -and (Test-Path -LiteralPath $walPath)) {
 
 if ($wal) {
     # Use pywal colors
+    # note bg is not used to avoid clashing with terminal bg
     $fg  = $wal.special.foreground
-    # $bg  = $wal.special.background # (not used to avoid clash with terminal bg if transparent)
     $c0  = $wal.colors.color0
     $c2  = $wal.colors.color2
     $c3  = $wal.colors.color3
@@ -41,7 +41,6 @@ if ($wal) {
     # Static fallback: derive from PSReadLine palette if available
     $ps = $global:PSColors.PSReadLine
     $fg  = $ps.Default
-    # $bg  = '#1e1e1e' # (not used to avoid clash with terminal bg if transparent)
     $c0  = '#2a2a2a'
     $c2  = $ps.String
     $c3  = $ps.Number
@@ -54,7 +53,7 @@ if ($wal) {
 
 # Build fzf color map
 $colorMap = @(
-    "fg:$fg","bg:$bg","hl:$c4",
+    "fg:$fg","hl:$c4",
     "fg+:$fg","bg+:$c0","hl+:$c6",
     "info:$c4","prompt:$c5","pointer:$c5",
     "marker:$c2","spinner:$c4","header:$c3",
