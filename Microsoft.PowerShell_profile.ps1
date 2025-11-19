@@ -311,7 +311,6 @@ function Initialize-FZFColors {
     try {
         & "$PSScriptRoot\Scripts\sync_fzf.ps1"
         $global:__fzf_sync_init_done = $true
-        Write-Verbose "FZF colors synced successfully"
     } catch {
         Write-Verbose "Failed to sync FZF colors: $($_.Exception.Message)"
     }
@@ -831,7 +830,7 @@ function Initialize-PSFzf {
         }
 
         $global:__psfzf_init_done = $true
-        Write-Verbose "PSFzf module loaded successfully with key bindings: Ctrl+t (directory provider), Ctrl+r (history search)"
+        Write-Host "PSFzf loaded, Press Ctrl+T or Ctrl+R again to use fuzzy finder." -ForegroundColor (Get-ProfileColor 'UI' 'Success')
 
     } catch {
         Add-ProfileWarning "Failed to import PSFzf module: $($_.Exception.Message)"

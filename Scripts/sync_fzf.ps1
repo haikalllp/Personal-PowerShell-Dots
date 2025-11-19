@@ -14,7 +14,7 @@ $wal = $null
 if (-not $FromStatic -and (Test-Path -LiteralPath $walPath)) {
     try {
         # Attempt to fix JSON formatting if needed (the script is idempotent)
-        & "$PSScriptRoot\fix_json_formatting.ps1" -ColorsPath $walPath
+        & "$PSScriptRoot\fix_json_formatting.ps1" -ColorsPath $walPath | Out-Null
 
         # Parse the JSON after potential fixing
         $wal = Get-Content -Path $walPath -Raw | ConvertFrom-Json
@@ -79,6 +79,9 @@ $env:FZF_DEFAULT_OPTS = @($base, $colorOpt) -join ' ' -replace '\s+', ' '
 # Ensure zoxide interactive uses same palette and base flags as Ctrl+r/Ctrl+t
 # Mirror full FZF_DEFAULT_OPTS so zi gets --height 40% --reverse --border --ansi + colors
 $env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
+
+# Show success message for color sync
+Write-Host "FZF colors synced with theme" -ForegroundColor Green
 
 if ($Print) {
     Write-Host "FZF_DEFAULT_OPTS: $($env:FZF_DEFAULT_OPTS)"
