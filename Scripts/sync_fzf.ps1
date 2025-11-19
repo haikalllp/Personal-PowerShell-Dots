@@ -77,13 +77,9 @@ if ([string]::IsNullOrWhiteSpace($env:FZF_DEFAULT_OPTS)) {
 }
 $env:FZF_DEFAULT_OPTS = @($base, $colorOpt) -join ' ' -replace '\s+', ' '
 
-# Ensure zoxide interactive uses same palette (prefer color-only here)
-if ([string]::IsNullOrWhiteSpace($env:_ZO_FZF_OPTS)) {
-    $env:_ZO_FZF_OPTS = $colorOpt
-} else {
-    $env:_ZO_FZF_OPTS = ($env:_ZO_FZF_OPTS -replace '--color=("[^"]+"|\S+)', '').Trim()
-    $env:_ZO_FZF_OPTS = @($env:_ZO_FZF_OPTS, $colorOpt) -join ' ' -replace '\s+', ' '
-}
+# Ensure zoxide interactive uses same palette and base flags as Ctrl+r/Ctrl+t
+# Mirror full FZF_DEFAULT_OPTS so zi gets --height 40% --reverse --border --ansi + colors
+$env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
 
 if ($Print) {
     Write-Host "FZF_DEFAULT_OPTS: $($env:FZF_DEFAULT_OPTS)"

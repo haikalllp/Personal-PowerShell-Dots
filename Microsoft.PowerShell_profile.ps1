@@ -811,10 +811,11 @@ if ($psfzfAvailable) {
         # Use fd as the default file searcher for fzf if available
         if (Test-CommandExists fd) {
             Set-PsFzfOption -EnableFd:$true
-            # Set FZF_DEFAULT_COMMAND to use fd with appropriate options
-            $env:FZF_DEFAULT_COMMAND = 'fd -a -j 4'
+            # Set FZF_DEFAULT_COMMAND to use fd with appropriate options, including hidden files but excluding .git and other ignored files
+            # Use --base-directory to ensure fd returns relative paths from current directory, preventing path duplication
+            $env:FZF_DEFAULT_COMMAND = 'fd --hidden --exclude .git'
         }
-        Write-Verbose "PSFzf module loaded successfully with key bindings: Ctrl+t (file provider), Ctrl+r (history search)"
+        Write-Verbose "PSFzf module loaded successfully with key bindings: Ctrl+t (directory provider), Ctrl+r (history search)"
 
     } catch {
         Add-ProfileWarning "Failed to import PSFzf module: $($_.Exception.Message)"
@@ -827,9 +828,10 @@ if ($psfzfAvailable) {
     if (Test-CommandExists fzf) {
         Add-ProfileWarning "Basic fzf command detected but PSFzf module not installed. Install PSFzf for full integration."
 
-        # Set basic FZF_DEFAULT_COMMAND if fd is available
+        # Set basic FZF_DEFAULT_COMMAND if fd is available, including hidden files but excluding .git and other ignored files
+        # Use --base-directory to ensure fd returns relative paths from current directory, preventing path duplication
         if (Test-CommandExists fd) {
-            $env:FZF_DEFAULT_COMMAND = 'fd -a -j 4'
+            $env:FZF_DEFAULT_COMMAND = 'fd --hidden --exclude .git'
         }
     }
 }
@@ -1457,7 +1459,7 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SYSTEM TOOLS$($PSSt
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))winutildev$($PSStyle.Reset)          - Run WinUtil pre-release script
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))FUZZY FINDER (PSFZF)$($PSStyle.Reset)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Ctrl+t$($PSStyle.Reset)             - Fuzzy file selection (requires PSFzf)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Ctrl+t$($PSStyle.Reset)             - Fuzzy directory selection (requires PSFzf)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Ctrl+r$($PSStyle.Reset)             - Fuzzy history search (requires PSFzf)
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (ZOXIDE)$($PSStyle.Reset)
