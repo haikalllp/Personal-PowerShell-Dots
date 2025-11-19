@@ -138,6 +138,7 @@ After installing the dependencies, set up the PowerShell profile:
    ```
 
 3. Configure the profile by editing the **user configuration section** in `Microsoft.PowerShell_profile.ps1`:
+   - Set your preferred default editor (notepad, neovim, vscode)
    - Set your preferred window tiling manager
    - Enable/disable optional theme sync features
    - Customize color mappings
@@ -159,14 +160,19 @@ After installing the dependencies, set up the PowerShell profile:
 Located at the top of `Microsoft.PowerShell_profile.ps1`:
 
 ```powershell
+# Default Editor Configuration
+# Valid values: "notepad", "neovim", "vscode"
+# Determines which editor to use for file editing operations
+$global:DefaultEditor = "vscode"
+
 # Window Tiling Manager Configuration
 # Valid values: "komorebi", "glazewm", "none"
 $global:WindowTilingManager = "glazewm"
 
 # Optional Theme Sync Configuration
-$global:UseYasb = $true            # Set to $true if using Yasb
-$global:UseBetterDiscord = $false  # Set to $true if using BetterDiscord
-$global:UsePywalfox = $false       # Set to $true if using Pywalfox
+$global:UseYasb = $true             # Set to $true if using Yasb
+$global:UseBetterDiscord = $false   # Set to $true if using BetterDiscord
+$global:UsePywalfox = $false        # Set to $true if using Pywalfox
 
 # Startup Diagnostics Configuration
 $global:ClearOnStartup = $true     # Set to $false to prevent Clear-Host during startup
@@ -335,7 +341,7 @@ Enter your choice (1-4):
 - `uptime` - Show system uptime
 - `flushdns` - Clear DNS cache
 - `Get-PubIP` - Get public IP address
-- `Edit-Profile` (or `ep`) - Edit PowerShell profile
+- `Edit-Profile` (or `ep`) - Edit PowerShell profile using configured default editor
 
 ### Fuzzy Finder
 

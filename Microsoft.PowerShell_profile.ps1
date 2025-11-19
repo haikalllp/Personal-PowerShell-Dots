@@ -55,6 +55,11 @@
 #================================================================================
 # All user-configurable settings:
 
+# Default Editor Configuration
+# Valid values: "notepad", "neovim", "vscode"
+# Determines which editor to use for file editing operations
+$global:DefaultEditor = "vscode"
+
 # Window Tiling Manager Configuration
 # Valid values: "komorebi", "glazewm", "none"
 # Only one should be active at a time
@@ -62,9 +67,9 @@ $global:WindowTilingManager = "glazewm"
 
 # Optional Theme Sync Configuration
 # Set to $true if you have the corresponding application installed and want theme sync
-$global:UseYasb = $true            # Set to $true if using Yasb
+$global:UseYasb = $true             # Set to $true if using Yasb
 $global:UseBetterDiscord = $false   # Set to $true if using BetterDiscord
-$global:UsePywalfox = $true        # Set to $true if using Pywalfox
+$global:UsePywalfox = $false        # Set to $true if using Pywalfox
 
 # Startup Diagnostics Configuration
 # Set to $false to prevent Clear-Host from clearing warnings/errors during startup
@@ -174,7 +179,8 @@ function Show-StartupDiagnostics {
     }
 
     # Errors added during this profile load only
-    $delta = $Error.Count - ($script:__profileErrorCountStart ?? 0)
+    $errorStart = if ($script:__profileErrorCountStart) { $script:__profileErrorCountStart } else { 0 }
+    $delta = $Error.Count - $errorStart
     if ($delta -le 0) { return }
 
     $startupErrors = $Error[0..([Math]::Min(9, $delta - 1))]
@@ -607,8 +613,74 @@ if (Test-CommandExists zoxide) {
 }
 
 # Editor Configuration
-# Set default editor with fallback chain: VS Code -> Notepad
-$EDITOR = if (Test-CommandExists code) { 'code' } elseif (Test-CommandExists notepad) { 'notepad' } else { 'notepad' }
+# Function to get the configured editor with proper fallback handling
+function Get-ConfiguredEditor {
+    try {
+        # Validate the DefaultEditor configuration
+        $validEditors = @("notepad", "neovim", "vscode")
+        if ($validEditors -notcontains $global:DefaultEditor) {
+            Add-ProfileWarning "Invalid DefaultEditor value: '$($global:DefaultEditor)'. Valid values are: $($validEditors -join ', '). Falling back to vscode."
+            $global:DefaultEditor = "vscode"
+        }
+
+        # Determine the editor command based on configuration
+        switch ($global:DefaultEditor) {
+            "notepad" {
+                if (Test-CommandExists notepad) {
+                    return 'notepad'
+                } else {
+                    Add-ProfileWarning "Notepad not found. Falling back to available editor."
+                    return Get-FallbackEditor
+                }
+            }
+            "neovim" {
+                if (Test-CommandExists nvim) {
+                    return 'nvim'
+                } elseif (Test-CommandExists nvim.exe) {
+                    return 'nvim.exe'
+                } else {
+                    Add-ProfileWarning "Neovim not found. Falling back to available editor."
+                    return Get-FallbackEditor
+                }
+            }
+            "vscode" {
+                if (Test-CommandExists code) {
+                    return 'code'
+                } else {
+                    Add-ProfileWarning "VS Code not found. Falling back to available editor."
+                    return Get-FallbackEditor
+                }
+            }
+            default {
+                Add-ProfileWarning "Unknown editor configuration: '$($global:DefaultEditor)'. Using fallback."
+                return Get-FallbackEditor
+            }
+        }
+    } catch {
+        Add-ProfileWarning "Error determining editor: $($_.Exception.Message). Using fallback."
+        return Get-FallbackEditor
+    }
+}
+
+# Helper function to provide fallback editor selection
+function Get-FallbackEditor {
+    # Fallback chain: VS Code -> Neovim -> Notepad
+    if (Test-CommandExists code) {
+        return 'code'
+    } elseif (Test-CommandExists nvim) {
+        return 'nvim'
+    } elseif (Test-CommandExists nvim.exe) {
+        return 'nvim.exe'
+    } elseif (Test-CommandExists notepad) {
+        return 'notepad'
+    } else {
+        Add-ProfileWarning "No suitable editor found. Please install VS Code, Neovim, or ensure Notepad is available."
+        return 'notepad'  # Last resort, will likely fail but provides a consistent behavior
+    }
+}
+
+# Set the EDITOR environment variable using the configured editor
+$EDITOR = Get-ConfiguredEditor
 Set-Alias -Name vim -Value $EDITOR -Scope Global
 #endregion
 
@@ -1068,7 +1140,7 @@ function Update-PowerShell {
 }
 
 function Edit-Profile {
-    # Open the current PowerShell profile for editing
+    # Open the current PowerShell profile for editing using the configured editor
     param()
 
     $profilePath = $PROFILE
@@ -1079,13 +1151,28 @@ function Edit-Profile {
         New-Item -ItemType Directory -Path $parent -Force | Out-Null
     }
 
-    # Prefer nvim if present
-    if (Test-CommandExists nvim) {
-        & nvim $profilePath
-    } elseif (Test-CommandExists nvim.exe) {
-        & nvim.exe $profilePath
-    } else {
-        & $EDITOR $profilePath
+    # Get the configured editor with proper fallback handling
+    $selectedEditor = Get-ConfiguredEditor
+
+    try {
+        # Launch the selected editor
+        & $selectedEditor $profilePath
+    } catch {
+        Add-ProfileWarning "Failed to launch editor '$selectedEditor': $($_.Exception.Message)"
+
+        # Try fallback editor if primary failed
+        $fallbackEditor = Get-FallbackEditor
+        if ($fallbackEditor -ne $selectedEditor) {
+            Write-Host "Attempting fallback editor: $fallbackEditor" -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
+            try {
+                & $fallbackEditor $profilePath
+            } catch {
+                Add-ProfileWarning "Fallback editor also failed: $($_.Exception.Message)"
+                Write-Host "Please manually edit your profile at: $profilePath" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+            }
+        } else {
+            Write-Host "Please manually edit your profile at: $profilePath" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        }
     }
 }
 
@@ -1200,13 +1287,13 @@ function update-colours {
     try {
         # Sync Windows Terminal Color Scheme
         if ($backend) {
-            Write-Host "Updating windows terminal colors scheme with $backend backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            Write-Host "Updating Windows Terminal colors scheme with $backend backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
             Update-WalTheme -Backend $backend
         } else {
-            Write-Host "Updating windows terminal colors scheme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            Write-Host "Updating Windows Terminal colors scheme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
             Update-WalTheme
         }
-        Write-Host "Terminal colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+        Write-Host "Windows Terminal colors scheme updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
 
         # Sync Terminal Colors for PSReadLine, PSStyle and fzf
         if (Test-CommandExists Set-PSReadLineOption) {
@@ -1425,7 +1512,8 @@ if ($global:fastfetch) {
 }
 
 # Show startup diagnostics after fastfetch if any warnings/errors were captured
-if ($script:__profileWarnings.Count -gt 0 -or (($Error.Count - ($script:__profileErrorCountStart ?? 0)) -gt 0)) {
+$errorStart = if ($script:__profileErrorCountStart) { $script:__profileErrorCountStart } else { 0 }
+if ($script:__profileWarnings.Count -gt 0 -or (($Error.Count - $errorStart) -gt 0)) {
     Show-StartupDiagnostics
 }
 
