@@ -1250,38 +1250,73 @@ function flushdns {
 # Functions to update terminal themes with pywal/winwal
 
 function update-colours {
-    # Display menu for backend selection
-    Write-Host "Select a color extraction backend:" -ForegroundColor (Get-ProfileColor 'UI' 'HelpTitle')
-    Write-Host "1. Default" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
-    Write-Host "2. colorz" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
-    Write-Host "3. colorthief" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
-    Write-Host "4. haishoku" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
-    Write-Host ""
+    param(
+        [Parameter(Position=0)]
+        [string]$Backend = $null,
+        [Parameter()]
+        [Alias('b')]
+        [string]$BackendAlias = $null
+    )
 
-    $choice = Read-Host "Enter your choice (1-4)"
+    # Debug output to help troubleshoot
+    Write-Verbose "update-colours called with Backend parameter: '$Backend', BackendAlias: '$BackendAlias'"
 
-    # Process user selection
+    # Process backend selection
     $backend = $null
-    switch ($choice) {
-        "1" {
+    # More robust parameter detection
+    Write-Verbose "Backend parameter type: $($Backend.GetType().Name), value: '$Backend'"
+    Write-Verbose "BackendAlias parameter type: $($BackendAlias.GetType().Name), value: '$BackendAlias'"
+
+    # Use BackendAlias if Backend is null (for -b parameter)
+    $selectedBackend = if ([string]::IsNullOrEmpty($Backend) -and -not [string]::IsNullOrEmpty($BackendAlias)) { $BackendAlias } else { $Backend }
+
+    Write-Verbose "Selected backend: '$selectedBackend'"
+
+    if ($null -eq $selectedBackend -or [string]::IsNullOrEmpty($selectedBackend)) {
+        # Display menu for backend selection
+        Write-Host "Select a color extraction backend:" -ForegroundColor (Get-ProfileColor 'UI' 'HelpTitle')
+        Write-Host "1. Default" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+        Write-Host "2. colorz" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+        Write-Host "3. colorthief" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+        Write-Host "4. haishoku" -ForegroundColor (Get-ProfileColor 'UI' 'HelpCategory')
+        Write-Host ""
+
+        $choice = Read-Host "Enter your choice (1-4)"
+
+        switch ($choice) {
+            "1" {
+                Write-Host "Using default backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                $backend = $null
+            }
+            "2" {
+                Write-Host "Using colorz backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                $backend = "colorz"
+            }
+            "3" {
+                Write-Host "Using colorthief backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                $backend = "colorthief"
+            }
+            "4" {
+                Write-Host "Using haishoku backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                $backend = "haishoku"
+            }
+            default {
+                Add-ProfileWarning "Invalid choice. Using default backend..."
+                $backend = $null
+            }
+        }
+    } else {
+        # Validate the provided backend parameter
+        $validBackends = @("default", "colorz", "colorthief", "haishoku")
+        if ($Backend -notin $validBackends) {
+            Add-ProfileWarning "Invalid backend '$Backend'. Valid options are: $($validBackends -join ', '). Using default backend..."
+            $backend = $null
+        } elseif ($Backend -eq "default") {
             Write-Host "Using default backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
             $backend = $null
-        }
-        "2" {
-            Write-Host "Using colorz backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-            $backend = "colorz"
-        }
-        "3" {
-            Write-Host "Using colorthief backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-            $backend = "colorthief"
-        }
-        "4" {
-            Write-Host "Using haishoku backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-            $backend = "haishoku"
-        }
-        default {
-            Add-ProfileWarning "Invalid choice. Using default backend..."
-            $backend = $null
+        } else {
+            Write-Host "Using $Backend backend..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+            $backend = $Backend
         }
     }
 
@@ -1467,8 +1502,9 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SMART NAVIGATION (Z
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))zi$($PSStyle.Reset)                    - Interactive directory selection
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))THEME UTILITIES$($PSStyle.Reset)
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colours$($PSStyle.Reset) - Update universal colour theme following wallpaper colour with interactive menu
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Interactive menu to select backend: default, colorz, colorthief, haishoku
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))update-colours$($PSStyle.Reset) [backend] - Update universal colour theme following wallpaper colour
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Parameters: default, colorz, colorthief, haishoku (or no parameter for interactive menu)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Examples: update-colours, update-colours colorz, update-colours haishoku
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))  $([char]0x2514)$([char]0x2500)$([char]0x2500) Works with: Terminal, PSReadLine, Yasb, GlazeWM, Komorebi, Better Discord, Pywalfox.
 
 "@
