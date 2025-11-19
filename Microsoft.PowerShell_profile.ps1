@@ -1210,6 +1210,15 @@ function Edit-Profile {
     }
 }
 
+function Reload-Profile {
+    # Reload the current PowerShell profile
+    try {
+        . $PROFILE
+    } catch {
+        Add-ProfileWarning "Failed to reload profile: $($_.Exception.Message)"
+    }
+}
+
 function winutil {
     # Run the WinUtil full-release script
     try { irm https://christitus.com/win | iex } catch { Add-ProfileWarning "Failed to load winutil: $($_.Exception.Message)" }
@@ -1499,6 +1508,7 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))GIT SHORTCUTS$($PSS
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))PROFILE MANAGEMENT$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Edit-Profile$($PSStyle.Reset) (ep)   - Open profile in configured editor
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Reload-Profile$($PSStyle.Reset) (rp)   - Reload profile in current session
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Update-PowerShell$($PSStyle.Reset) - Update PowerShell (winget/choco)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))Show-StartupDiagnostics$($PSStyle.Reset) - Display captured startup warnings/errors
 
@@ -1527,6 +1537,9 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))THEME UTILITIES$($P
 
 # Create short alias for Edit-Profile
 Set-Alias -Name ep -Value Edit-Profile -Scope Global
+
+# Create short alias for Reload-Profile
+Set-Alias -Name rel -Value Reload-Profile -Scope Global
 
 
 # ===============================================================================
