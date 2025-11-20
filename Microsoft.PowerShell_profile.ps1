@@ -1308,10 +1308,41 @@ function Get-PubIP {
     }
 }
 
-function export([string]$name, [string]$value) {
-    # Set environment variable for current session
-    [System.Environment]::SetEnvironmentVariable($name, $value, [System.EnvironmentVariableTarget]::Process)
-    Write-Host "Set environment variable: $name=$value" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+function export() {
+    param([Parameter(ValueFromRemainingArguments=$true)][string[]]$Arguments)
+
+    if ($Arguments.Count -eq 0) {
+        Write-Host "Usage: export KEY=value" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        return
+    }
+
+    $fullArgs = $Arguments -join ' '
+    $pattern = '([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(?:"([^"]*)"|''([^'']*)''|([^ \t\r\n]+))'
+    $matches = [regex]::Matches($fullArgs, $pattern)
+
+    if ($matches.Count -eq 0) {
+        Write-Host "Error: No valid KEY=value pairs found" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        return
+    }
+
+    foreach ($match in $matches) {
+        $name = $match.Groups[1].Value
+        $value = $match.Groups[2].Success ? $match.Groups[2].Value :
+                 $match.Groups[3].Success ? $match.Groups[3].Value :
+                 $match.Groups[4].Value
+
+        if ($name -notmatch '^[a-zA-Z_][a-zA-Z0-9_]*$') {
+            Write-Host "Error: Invalid variable name '$name'" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+            continue
+        }
+
+        try {
+            [System.Environment]::SetEnvironmentVariable($name, $value, [System.EnvironmentVariableTarget]::Process)
+            Write-Host "✓ Set environment variable: $name=$value" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+        } catch {
+            Write-Host "Error: Failed to set '$name'" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        }
+    }
 }
 
 function pkill([string]$name) {
