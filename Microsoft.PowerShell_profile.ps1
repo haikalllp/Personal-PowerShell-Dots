@@ -1075,9 +1075,18 @@ function nf([string]$name) {
     New-Item -ItemType File -Path . -Name $name -Force | Out-Null
 }
 
-function ff([string]$name) {
-    # Find files by name pattern recursively
-    Get-ChildItem -Recurse -Filter "*$name*" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+function ff([string]$pattern) {
+    # Find files by name pattern recursively using fd or fallback to ripgrep/Get-ChildItem
+    if (Test-CommandExists fd) {
+        # Use fd for optimized file finding with regex support
+        fd --hidden --follow --exclude .git --exclude node_modules $pattern
+    } elseif (Test-CommandExists rg) {
+        # Fallback to ripgrep if fd is not available
+        rg --files --hidden --follow --glob '!.git/**' --glob '!node_modules/**' $pattern
+    } else {
+        # Final fallback to Get-ChildItem if neither fd nor rg is available
+        Get-ChildItem -Recurse -Filter "*$pattern*" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+    }
 }
 
 function unzip([string]$file) {
@@ -1096,13 +1105,76 @@ function tail([string]$Path, [int]$n=10, [switch]$f) {
 }
 
 function grep([string]$regex, $dir) {
-    # Search for regex pattern in files
-    if ($dir) { Get-ChildItem $dir | Select-String $regex } else { $input | Select-String $regex }
+    # Search for regex pattern in files using ripgrep
+    if (Test-CommandExists rg) {
+        if ($dir) {
+            rg $regex $dir
+        } else {
+            rg $regex
+        }
+    } else {
+        # Fallback to Select-String if ripgrep is not available
+        if ($dir) { Get-ChildItem $dir | Select-String $regex } else { $input | Select-String $regex }
+    }
 }
 
 function sed([string]$file, [string]$find, [string]$replace) {
-    # Replace text in a file using regex
-    (Get-Content $file) -replace [regex]::Escape($find), $replace | Set-Content $file
+    # Replace text in a file using regex with improved error handling
+    if (-not (Test-Path $file)) {
+        Write-Host "File not found: $file" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        return
+    }
+
+    try {
+        # Support both literal and regex patterns
+        $content = Get-Content $file -Raw
+        $newContent = $content -replace $find, $replace
+        Set-Content $file -Value $newContent -Encoding UTF8
+        Write-Host "Successfully replaced patterns in $file" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+    } catch {
+        Write-Host "Error processing file $file : $($_.Exception.Message)" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+    }
+}
+
+function grep-replace([string]$pattern, [string]$replace, [string]$directory = '.') {
+    # Advanced find and replace using ripgrep for file discovery
+    if (-not (Test-CommandExists rg)) {
+        Write-Host "ripgrep (rg) not found. Install ripgrep for this functionality." -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        return
+    }
+
+    try {
+        # Find files containing the pattern using ripgrep
+        $files = rg --files-with-matches --hidden --follow --glob '!.git/**' --glob '!node_modules/**' $pattern $directory
+
+        if (-not $files) {
+            Write-Host "No files found containing pattern: $pattern" -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
+            return
+        }
+
+        Write-Host "Found $($files.Count) files. Processing..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+
+        $processed = 0
+        foreach ($file in $files) {
+            try {
+                $content = Get-Content $file -Raw
+                $newContent = $content -replace $pattern, $replace
+
+                # Only write if content actually changed
+                if ($newContent -ne $content) {
+                    Set-Content $file -Value $newContent -Encoding UTF8
+                    $processed++
+                    Write-Host "  Updated: $file" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+                }
+            } catch {
+                Write-Host "  Error processing $file : $($_.Exception.Message)" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+            }
+        }
+
+        Write-Host "Completed. $processed files updated." -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+    } catch {
+        Write-Host "Error in grep-replace: $($_.Exception.Message)" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+    }
 }
 #endregion
 
@@ -1250,9 +1322,15 @@ function pkill([string]$name) {
     Get-Process $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 
-function pgrep([string]$name) {
-    # List processes by name
-    Get-Process $name -ErrorAction SilentlyContinue | Format-Table Name, Id, CPU, WorkingSet
+function pgrep([string]$pattern) {
+    # List processes by name using regex pattern matching (inspired by ripgrep)
+    try {
+        Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -match $pattern } | Format-Table Name, Id, CPU, WorkingSet
+    } catch {
+        Write-Host "Invalid regex pattern: $pattern" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
+        # Fallback: show all processes if regex is invalid
+        Get-Process -ErrorAction SilentlyContinue | Format-Table Name, Id, CPU, WorkingSet
+    }
 }
 
 
@@ -1466,12 +1544,13 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpSeparator'))=================
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))FILE & DIRECTORY OPERATIONS$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))touch$($PSStyle.Reset) <file>     - Create or update an empty file
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))nf$($PSStyle.Reset) <name>       - Create new file in current directory
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ff$($PSStyle.Reset) <pattern>    - Recursively find files matching pattern
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ff$($PSStyle.Reset) <pattern>    - Find files by pattern
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))unzip$($PSStyle.Reset) <file>     - Extract zip file to current directory
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))head$($PSStyle.Reset) <file> [n]  - Show first n lines of file (default: 10)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))tail$($PSStyle.Reset) <file> [n]  - Show last n lines of file (default: 10)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))grep$($PSStyle.Reset) <regex> [dir] - Search files for regex pattern
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))sed$($PSStyle.Reset) <file> <find> <replace> - Replace text in file
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))sed$($PSStyle.Reset) <file> <find> <replace> - Replace text in file (regex supported)
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))grep-replace$($PSStyle.Reset) <pattern> <replace> [dir] - Bulk replace across files (uses ripgrep)
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))NAVIGATION$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))mkcd$($PSStyle.Reset) <dir>       - Create directory and change to it
@@ -1486,7 +1565,7 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SYSTEM UTILITIES$($
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))uptime$($PSStyle.Reset)            - Show system uptime
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))flushdns$($PSStyle.Reset)          - Clear DNS cache
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pkill$($PSStyle.Reset) <name>       - Kill processes by name
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pgrep$($PSStyle.Reset) <name>       - List processes by name with details
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))pgrep$($PSStyle.Reset) <pattern>    - List processes by regex pattern
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))export$($PSStyle.Reset) <name> <value> - Set environment variable for session
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))TOOLS$($PSStyle.Reset)
