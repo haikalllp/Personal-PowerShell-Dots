@@ -2,9 +2,8 @@
 
 A comprehensive PowerShell profile configuration that enhances the Windows command-line experience with modern tools, dynamic theming, and productivity utilities.
 
-## Overview
-
-This repository contains a highly customized PowerShell profile (`Microsoft.PowerShell_profile.ps1`) that integrates multiple development tools and utilities to create a powerful, visually appealing terminal environment with dynamic theming capabilities.
+![](assets/pic1.png)
+![](assets/pic2.png)
 
 ## Features
 
@@ -357,12 +356,14 @@ Enter your choice (1-4):
 
 ### Core Scripts
 
-- [`fix_json_formatting.ps1`](Scripts/fix_json_formatting.ps1) - Fixes JSON formatting issues in pywal colors
-- [`sync_fzf.ps1`](Scripts/sync_fzf.ps1) - Syncs FZF colors with pywal theme
-- [`sync_discord.ps1`](Scripts/sync_discord.ps1) - Syncs BetterDiscord theme
-- [`sync_glazewm.ps1`](Scripts/sync_glazewm.ps1) - Syncs GlazeWM theme
-- [`sync_komorebi.ps1`](Scripts/sync_komorebi.ps1) - Syncs Komorebi theme
-- [`sync_pywalfox.ps1`](Scripts/sync_pywalfox.ps1) - Syncs Pywalfox theme
+- [`fix_json_formatting.ps1`](Scripts/fix_json_formatting.ps1) - Fixes JSON formatting issues in pywal colors for Windows path compatibility
+- [`sync_fzf.ps1`](Scripts/sync_fzf.ps1) - Syncs FZF fuzzy finder colors with pywal theme
+- [`sync_fd.ps1`](Scripts/sync_fd.ps1) - Syncs fd file finder colors using LS_COLORS with pywal theme
+- [`sync_cava.ps1`](Scripts/sync_cava.ps1) - Syncs Cava audio visualizer gradient colors with pywal theme
+- [`sync_discord.ps1`](Scripts/sync_discord.ps1) - Syncs BetterDiscord theme with pywal colors
+- [`sync_glazewm.ps1`](Scripts/sync_glazewm.ps1) - Syncs GlazeWM window manager theme with pywal colors
+- [`sync_komorebi.ps1`](Scripts/sync_komorebi.ps1) - Syncs Komorebi window manager theme with pywal colors
+- [`sync_pywalfox.ps1`](Scripts/sync_pywalfox.ps1) - Syncs Pywalfox Firefox theme with pywal colors
 
 ## Help
 
