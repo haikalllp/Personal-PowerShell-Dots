@@ -313,6 +313,20 @@ function Initialize-FZFColors {
         Write-Verbose "Failed to sync FZF colors: $($_.Exception.Message)"
     }
 }
+
+# FD color sync lazy loading
+$global:__fd_sync_init_done = $false
+function Initialize-FDColors {
+    # Lazy load FD color sync only when needed
+    if ($global:__fd_sync_init_done) { return }
+
+    try {
+        & "$PSScriptRoot\Scripts\sync_fd.ps1"
+        $global:__fd_sync_init_done = $true
+    } catch {
+        Write-Verbose "Failed to sync FD colors: $($_.Exception.Message)"
+    }
+}
 #endregion
 
 #region Color & Theme System
@@ -833,6 +847,7 @@ if (Test-CommandExists fzf) {
 
                 # Simple pipeline approach for file search using fd, rg, or Get-ChildItem
                 if (Test-CommandExists fd) {
+                    # Use fd with explicit flags
                     $files = fd --hidden --follow --exclude .git --exclude node_modules 2>$null
                 } elseif (Test-CommandExists rg) {
                     $files = rg --files --hidden --follow --glob '!.git/**' --glob '!node_modules/**' 2>$null
@@ -1078,8 +1093,10 @@ function nf([string]$name) {
 function ff([string]$pattern) {
     # Find files by name pattern recursively using fd or fallback to ripgrep/Get-ChildItem
     if (Test-CommandExists fd) {
-        # Use fd for optimized file finding with regex support
-        fd --hidden --follow --exclude .git --exclude node_modules $pattern
+        # Initialize FD colors for consistent theming
+        Initialize-FDColors
+        # Use fd with explicit flags and LS_COLORS for theming
+        fd --hidden --follow --exclude .git --exclude node_modules --color=always $pattern
     } elseif (Test-CommandExists rg) {
         # Fallback to ripgrep if fd is not available
         rg --files --hidden --follow --glob '!.git/**' --glob '!node_modules/**' $pattern
@@ -1432,6 +1449,11 @@ function update-colors {
                 Write-Host "Updating fzf colors..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
                 Initialize-FZFColors
                 Write-Host "fzf colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+
+                # Update fd colors to match the new pywal/winwal theme (lazy load)
+                Write-Host "Updating fd colors..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                Initialize-FDColors
+                Write-Host "fd colors updated successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
                 Add-ProfileWarning "Failed to update PSReadLine colors: $($_.Exception.Message)"
             }
