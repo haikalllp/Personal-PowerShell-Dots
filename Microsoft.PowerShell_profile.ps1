@@ -978,17 +978,22 @@ function dtop {
     Set-Location -Path ([Environment]::GetFolderPath("Desktop"))
 }
 
+# wrapper for yazi (terminal based directory navigator)
+function ll {
+    $tmp = (New-TemporaryFile).FullName
+    yazi $args --cwd-file="$tmp"
+    $cwd = Get-Content -Path $tmp -Encoding UTF8
+    if (-not [String]::IsNullOrEmpty($cwd) -and $cwd -ne $PWD.Path) {
+        Set-Location -LiteralPath (Resolve-Path -LiteralPath $cwd).Path
+    }
+    Remove-Item -Path $tmp
+}
+
 # Enhanced File Listing Functions
 function la {
     # List all files including hidden ones (uses Terminal-Icons when available)
     Ensure-TerminalIcons
     Get-ChildItem -Path . -Force | Format-Table -AutoSize
-}
-
-function ll {
-    # List hidden files only (uses Terminal-Icons when available)
-    Ensure-TerminalIcons
-    Get-ChildItem -Path . -Force -Hidden | Format-Table -AutoSize
 }
 
 function ls {
@@ -1599,11 +1604,11 @@ $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))FILE & DIRECTORY OP
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))NAVIGATION$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))mkcd$($PSStyle.Reset) <dir>       - Create directory and change to it
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))docs$($PSStyle.Reset)              - Navigate to Documents folder
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))docs$($PSStyle.Reset)             - Navigate to Documents folder
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))dtop$($PSStyle.Reset)             - Navigate to Desktop folder
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))la$($PSStyle.Reset)                - List all files including hidden
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ll$($PSStyle.Reset)                - List hidden files only
-  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ls$($PSStyle.Reset) [args]       - List files with Terminal-Icons support
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ls$($PSStyle.Reset) [args]        - List files with Terminal-Icons support
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))la$($PSStyle.Reset)               - List all files including hidden
+  $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))ll$($PSStyle.Reset)               - Open Yazi file explorer
 
 $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCommand'))SYSTEM UTILITIES$($PSStyle.Reset)
   $($PSStyle.Foreground.$(Get-ProfileColor 'UI' 'HelpCategory'))sysinfo$($PSStyle.Reset)           - Display comprehensive system information
