@@ -64,7 +64,7 @@ $global:DefaultEditor = "vscode"
 # Window Tiling Manager Configuration
 # Valid values: "komorebi", "glazewm", "none"
 # Only one should be active at a time
-$global:WindowTilingManager = "glazewm"
+$global:WindowTilingManager = "komorebi"
 
 # Optional Theme Sync Configuration
 # Set to $true if you have the corresponding application installed and want theme sync

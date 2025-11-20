@@ -1,6 +1,9 @@
 # sync_komorebi.ps1
 # This script reads colors from wal colors.json and updates Komorebi config
 
+#! IMPORTANT:
+#! KOMOREBI USES BRITISH border_colours SPELLING instead of AMERICAN border_colors
+
 # Paths
 $walColorsPath = "$env:USERPROFILE\.cache\wal\colors.json"
 $configPath = "$env:USERPROFILE\.config\komorebi\komorebi.json"
@@ -37,25 +40,32 @@ if (Test-Path $configPath) {
 }
 
 # Store current colors for comparison
-$previousSingle = $currentConfig.border_colors.single
-$previousStack = $currentConfig.border_colors.stack
-$previousMonocle = $currentConfig.border_colors.monocle
-$previousUnfocused = $currentConfig.border_colors.unfocused
+$previousFloating = $currentConfig.border_colours.floating
+$previousSingle = $currentConfig.border_colours.single
+$previousStack = $currentConfig.border_colours.stack
+$previousMonocle = $currentConfig.border_colours.monocle
+$previousUnfocused = $currentConfig.border_colours.unfocused
+$previousUnfocusedLocked = $currentConfig.border_colours.unfocused_locked
 
 # Update the border colors
-$currentConfig.border_colors.single = $color4
-$currentConfig.border_colors.stack = $color6
-$currentConfig.border_colors.monocle = $color4
-$currentConfig.border_colors.unfocused = $color0
+$currentConfig.border_colours.floating = $color4
+$currentConfig.border_colours.single = $color4
+$currentConfig.border_colours.stack = $color6
+$currentConfig.border_colours.monocle = $color4
+$currentConfig.border_colours.unfocused = $color0
+$currentConfig.border_colours.unfocused_locked = $color0
 
 # Convert back to JSON and write to file
 $currentConfig | ConvertTo-Json -Depth 10 | Set-Content $configPath
 
 # Reload komorebi to apply changes
 komorebic reload-configuration
+komorebic start
 
 Write-Host "Komorebi config updated:"
+Write-Host "  Floating border: $previousFloating -> $color4"
 Write-Host "  Single border: $previousSingle -> $color4"
 Write-Host "  Stack border: $previousStack -> $color6"
 Write-Host "  Monocle border: $previousMonocle -> $color4"
 Write-Host "  Unfocused border: $previousUnfocused -> $color0"
+Write-Host "  Unfocused locked border: $previousUnfocusedLocked -> $color0"
