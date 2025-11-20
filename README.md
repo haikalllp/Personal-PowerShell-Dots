@@ -91,7 +91,7 @@ rm -Path "$HOME\Documents\PowerShell\Modules\winwal\.git" -r -fo
 
 # Install Python dependencies
 winget install Python.Python.3.13
-pip install pywal16 colorthief colorz haishoku
+pip install pywal colorthief colorz haishoku
 
 # Install ImageMagick for image processing used by winwal
 winget install imagemagick.imagemagick
