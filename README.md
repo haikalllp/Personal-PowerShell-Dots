@@ -112,20 +112,35 @@ After installing the dependencies, set up the PowerShell profile:
 
 1. Clone or download this repository to your PowerShell profile directory:
    ```powershell
-   # Step 1: Check if you have a profile and back it up if needed
-   if (Test-Path $PROFILE) {
-    Copy-Item $PROFILE "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1.backup"
-    Write-Host "Your existing PowerShell profile has been backed up to Microsoft.PowerShell_profile.ps1.backup"
+   # Step 1: Check if you have an existing profile and back it up if needed
+   $profilePath = "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
+   if (Test-Path $profilePath) {
+    $backupPath = "$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1.backup"
+    Copy-Item $profilePath $backupPath -Force
+   }
+
+   $profilePath = "$HOME\Documents\PowerShell\profile.ps1"
+   if (Test-Path $profilePath) {
+    $backupPath = "$HOME\Documents\PowerShell\profile.ps1.backup"
+    Copy-Item $profilePath $backupPath -Force
    }
 
    # Step 2: Clone to a temporary location
    git clone https://github.com/haikalllp/Personal-PowerShell-Dots "$HOME\Documents\PowerShell-Temp"
 
-   # Step 3: Move contents to your PowerShell directory
+   # Step 3: Remove existing PowerShell directory contents (except backup files and Modules folder)
+   if (Test-Path "$HOME\Documents\PowerShell") {
+    Get-ChildItem "$HOME\Documents\PowerShell" -Exclude "*.backup", "Modules" | Remove-Item -Recurse -Force
+   }
+
+   # Step 4: Move contents to your PowerShell directory
    Move-Item "$HOME\Documents\PowerShell-Temp\*" "$HOME\Documents\PowerShell\" -Force
 
-   # Step 4: Remove the temporary folder
+   # Step 5: Remove the temporary folder
    Remove-Item "$HOME\Documents\PowerShell-Temp" -Recurse -Force
+
+   # Step 6: Remove git metadata if you want a clean setup
+   Remove-Item "$HOME\Documents\PowerShell\.git" -Recurse -Force
    ```
 
 2. Head to the PowerShell profile path:
