@@ -68,10 +68,11 @@ $global:WindowTilingManager = "glazewm"
 
 # Optional Theme Sync Configuration
 # Set to $true if you have the corresponding application installed and want theme sync
-$global:UseYasb = $true             # Set to $true if using Yasb
-$global:UseCava = $true             # Set to $true if using Cava
-$global:UseBetterDiscord = $false   # Set to $true if using BetterDiscord
-$global:UsePywalfox = $true         # Set to $true if using Pywalfox
+$global:SyncYasb = $true             # Set to $true if using Yasb and want pywal theme sync
+$global:SyncNeovim = $true           # Set to $true if using Neovim
+$global:SyncCava = $true             # Set to $true if using Cava
+$global:SyncBetterDiscord = $false   # Set to $true if using BetterDiscord
+$global:SyncPywalfox = $true         # Set to $true if using Pywalfox
 
 # Startup Diagnostics Configuration
 # Set to $false to prevent Clear-Host from clearing warnings/errors during startup
@@ -1471,18 +1472,6 @@ function update-colors {
             Write-Host "Oh My Posh not found, skipping theme refresh." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
         }
 
-        # Sync Discord theme with the new color palette (only if BetterDiscord is enabled)
-        if ($global:UseBetterDiscord) {
-            try {
-                Write-Host "Syncing Discord theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-                $discordScript = Join-Path $PSScriptRoot "Scripts\sync_discord.ps1"
-                & $discordScript
-                Write-Host "Discord theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
-            } catch {
-                Add-ProfileWarning "Failed to sync Discord theme: $($_.Exception.Message)"
-            }
-        }
-
         # Sync window tiling manager theme based on global variable
         if ($global:WindowTilingManager -eq "glazewm") {
             # Sync Glazewm theme with the new color palette
@@ -1515,7 +1504,7 @@ function update-colors {
         }
 
         # Sync Pywalfox theme with the new color palette (only if Pywalfox is enabled)
-        if ($global:UsePywalfox) {
+        if ($global:SyncPywalfox) {
             try {
                 Write-Host "Syncing Pywalfox theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
                 $pywalfoxScript = Join-Path $PSScriptRoot "Scripts\sync_pywalfox.ps1"
@@ -1526,8 +1515,20 @@ function update-colors {
             }
         }
 
+         # Sync Discord theme with the new color palette (only if BetterDiscord is enabled)
+        if ($global:SyncBetterDiscord) {
+            try {
+                Write-Host "Syncing Discord theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                $discordScript = Join-Path $PSScriptRoot "Scripts\sync_discord.ps1"
+                & $discordScript
+                Write-Host "Discord theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            } catch {
+                Add-ProfileWarning "Failed to sync Discord theme: $($_.Exception.Message)"
+            }
+        }
+
         # Sync Cava theme with the new color palette (only if Cava is enabled)
-        if ($global:UseCava) {
+        if ($global:SyncCava) {
             try {
                 Write-Host "Syncing Cava theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
                 $cavaScript = Join-Path $PSScriptRoot "Scripts\sync_cava.ps1"
@@ -1538,8 +1539,20 @@ function update-colors {
             }
         }
 
+        # Sync Neovim theme with the new color palette (only if Neovim is enabled)
+        if ($global:SyncNeovim) {
+            try {
+                Write-Host "Syncing Neovim theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                $neovimScript = Join-Path $PSScriptRoot "Scripts\sync_neovim.ps1"
+                & $neovimScript
+                Write-Host "Neovim theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            } catch {
+                Add-ProfileWarning "Failed to sync Neovim theme: $($_.Exception.Message)"
+            }
+        }
+
         # Reload yasb with the new color palette (if enabled)
-        if ($global:UseYasb) {
+        if ($global:SyncYasb) {
             try {
                 Write-Host "Reloading Yasb..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
                 & yasbc reload

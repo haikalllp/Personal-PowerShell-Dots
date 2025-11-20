@@ -167,14 +167,15 @@ $global:DefaultEditor = "vscode"
 # Window Tiling Manager Configuration
 # Valid values: "komorebi", "glazewm", "none"
 # Only one should be active at a time
-$global:WindowTilingManager = "glazewm"
+$global:WindowTilingManager = "komorebi"
 
 # Optional Theme Sync Configuration
 # Set to $true if you have the corresponding application installed and want theme sync
-$global:UseYasb = $true             # Set to $true if using Yasb
-$global:UseCava = $true             # Set to $true if using Cava
-$global:UseBetterDiscord = $false   # Set to $true if using BetterDiscord
-$global:UsePywalfox = $true         # Set to $true if using Pywalfox
+$global:SyncYasb = $true             # Set to $true if using Yasb and want pywal theme sync
+$global:SyncNeovim = $true           # Set to $true if using Neovim
+$global:SyncCava = $true             # Set to $true if using Cava
+$global:SyncBetterDiscord = $false   # Set to $true if using BetterDiscord
+$global:SyncPywalfox = $true         # Set to $true if using Pywalfox
 
 # Startup Diagnostics Configuration
 # Set to $false to prevent Clear-Host from clearing warnings/errors during startup
