@@ -50,7 +50,7 @@ A comprehensive PowerShell profile configuration that enhances the Windows comma
 - **FZF**: Fuzzy finder for files and command history
 - **fd**: Fast file finder
 - **ripgrep**: Fast text search integration
-- **Neovim**: Modern text editor
+- **Neovim/Visual Studio Code**: Modern text editors
 - **Python 3.13+**: Required for Pywal/winwal
 
 ### Installation Steps
@@ -293,6 +293,15 @@ Enter your choice (1-4):
 ```
 > Choose your desired backend, each backend has its own method of extracting colors from the wallpaper.
 > Meaning a slight variation in colors depending on the backend chosen, good to experiment with each to see which you prefer.
+
+You can also call the command as a one-liner with a specific backend:
+```powershell
+# one liner
+update-colors -b "colorthief"
+
+# useful when working with running scripts like in yasb:
+cmd.exe /c start /min pwsh -Command \"update-colors -b colorthief\"
+```
 
 **Basically the script will perform the following actions:**
 1. Extract colors from your current wallpaper
