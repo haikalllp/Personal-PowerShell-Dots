@@ -64,7 +64,7 @@ $global:DefaultEditor = "vscode"
 # Window Tiling Manager Configuration
 # Valid values: "komorebi", "glazewm", "none"
 # Only one should be active at a time
-$global:WindowTilingManager = "komorebi"
+$global:WindowTilingManager = "glazewm"
 
 # Optional Theme Sync Configuration
 # Set to $true if you have the corresponding application installed and want theme sync
@@ -958,27 +958,6 @@ function Ensure-TerminalIcons {
     } else {
         # Module not installed; do not auto-install during normal startup
         $global:__terminalicons_init = $false
-    }
-}
-
-function Install-TerminalIcons {
-    # Install Terminal-Icons module for enhanced file icons
-    if (Get-Module -ListAvailable -Name Terminal-Icons) {
-        Write-Host "Terminal-Icons is already installed." -ForegroundColor (Get-ProfileColor 'UI' 'Warning')
-        return
-    }
-    if (-not (Get-Command Install-Module -ErrorAction SilentlyContinue)) {
-        Add-ProfileWarning "Install-Module not available in this session."
-        return
-    }
-    Write-Host "Installing Terminal-Icons module for CurrentUser..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
-    try {
-        Install-Module -Name Terminal-Icons -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop
-        Import-Module -Name Terminal-Icons -ErrorAction Stop
-        $global:__terminalicons_init = $true
-        Write-Host "Terminal-Icons installed and imported." -ForegroundColor (Get-ProfileColor 'UI' 'Success')
-    } catch {
-        Add-ProfileWarning "Failed to install Terminal-Icons: $($_.Exception.Message)"
     }
 }
 
