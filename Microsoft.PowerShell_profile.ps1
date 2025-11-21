@@ -309,7 +309,7 @@ function Initialize-FZFColors {
     param(
         [switch]$Silent    # Suppress success message when called with -Silent
     )
-    
+
     # Lazy load FZF color sync only when needed
     if ($global:__fzf_sync_init_done) { return }
 
@@ -331,7 +331,7 @@ function Initialize-FDColors {
     param(
         [switch]$Silent    # Suppress success message when called from Initialize-PSFZF
     )
-    
+
     # Lazy load FD color sync only when needed
     if ($global:__fd_sync_init_done) { return }
 
@@ -851,13 +851,16 @@ function Initialize-PSFZF {
         # Initialize FZF colors first to get color scheme (silent mode)
         Initialize-FZFColors -Silent
 
-        # Ctrl t options for file/directory selection with preview
-        $env:FZF_CTRL_T_OPTS = "--height 80% --layout reverse --border $env:FZF_DEFAULT_OPTS --style full"
+        # Get current user and drive info for bash preview script
+        $name = $env:USERNAME
+        $drive = $env:SystemDrive.TrimEnd(':').ToLower()
 
+        # Ctrl t options for file/directory selection with preview
+        $env:FZF_CTRL_T_OPTS = "--height 80% --layout reverse --border $env:FZF_DEFAULT_OPTS --style full --preview 'bash /mnt/$drive/Users/$name/Documents/PowerShell/Scripts/fzf-preview.sh {}' --preview-window '~3'"
         # Set up FZF_DEFAULT_COMMAND for file searches
         if (-not $env:FZF_DEFAULT_COMMAND) {
             if (Test-CommandExists fd) {
-                $env:FZF_DEFAULT_COMMAND = 'fd --hidden --follow --exclude ".git/**" --exclude "node_modules/**" --type f'
+                $env:FZF_DEFAULT_COMMAND = 'fd --hidden --follow --exclude ".git/**" --exclude "node_modules/**"'
             } elseif (Test-CommandExists rg) {
                 $env:FZF_DEFAULT_COMMAND = 'rg --hidden --follow --glob "!.git/**" --glob "!node_modules/**"'
             } else {
