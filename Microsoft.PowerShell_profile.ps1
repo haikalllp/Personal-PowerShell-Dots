@@ -829,7 +829,7 @@ if (Test-CommandExists Set-PSReadLineOption) {
 #endregion
 
 #region PSFZF Integration
-# Simplified fzf integration using PSFZF module
+# fzf integration using PSFZF module
 
 # PSFZF lazy loading
 $global:__psfzf_init_done = $false
@@ -851,8 +851,8 @@ function Initialize-PSFZF {
         # Initialize FZF colors first to get color scheme (silent mode)
         Initialize-FZFColors -Silent
 
-        # Configure PSFZF with different styles for different commands
-        $env:FZF_CTRL_T_OPTS = "--height 80% --layout reverse --border $env:FZF_DEFAULT_OPTS --style full --preview 'bat --color=always {}' --preview-window '~3'"
+        # Ctrl t options for file/directory selection with preview
+        $env:FZF_CTRL_T_OPTS = "--height 80% --layout reverse --border $env:FZF_DEFAULT_OPTS --style full"
 
         # Set up FZF_DEFAULT_COMMAND for file searches
         if (-not $env:FZF_DEFAULT_COMMAND) {
@@ -865,9 +865,10 @@ function Initialize-PSFZF {
             }
         }
 
+        # Ctrl r options for history search
         $env:FZF_CTRL_R_OPTS = "--height 40% --reverse --border --ansi"
 
-        # Set up zoxide to use specific options with colors from FZF_DEFAULT_OPTS
+        # Set up zoxide to use some options and colors from FZF_DEFAULT_OPTS
         $env:_ZO_FZF_OPTS = "--height 40% --reverse --border --ansi $env:FZF_DEFAULT_OPTS"
 
         $global:__psfzf_init_done = $true
