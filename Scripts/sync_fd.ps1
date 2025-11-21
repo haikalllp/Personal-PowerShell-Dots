@@ -4,7 +4,8 @@
 
 param(
     [switch]$FromStatic,   # Force static PSColors fallback
-    [switch]$Print         # Print effective values for verification
+    [switch]$Print,        # Print effective values for verification
+    [switch]$Silent        # Suppress success message when called from other functions
 )
 
 $walPath = "$env:USERPROFILE\.cache\wal\colors.json"
@@ -100,8 +101,10 @@ $colorOpt = "--color=always"
 # Set LS_COLORS environment variable for fd
 $env:LS_COLORS = $lsColors
 
-# Show success message for color sync
-Write-Host "FD Colors Loaded" -ForegroundColor Green
+# Show success message for color sync (unless silent mode)
+if (-not $Silent) {
+    Write-Host "FD Colors Loaded" -ForegroundColor Green
+}
 
 if ($Print) {
     Write-Host "LS_COLORS: $($env:LS_COLORS)"

@@ -19,6 +19,7 @@
 # - fd (https://github.com/sharkdp/fd) - Fast file finder for FZF integration
 # - ripgrep (https://github.com/BurntSushi/ripgrep) - Fast text search for FZF
 # - Terminal-Icons (PowerShell module) - File icons for enhanced ls output
+# - PSFzf (PowerShell module) - PowerShell integration for FZF
 # - fastfetch (https://github.com/fastfetch-cli/fastfetch) - System info display
 # - nvim (https://neovim.io/) - Preferred editor for profile editing
 # - pywal/winwal (https://github.com/scaryrawr/winwal) - Dynamic terminal theming
@@ -34,6 +35,7 @@
 # Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 # choco install oh-my-posh zoxide fzf ripgrep fastfetch neovim fd -y
 # Install-Module -Name Terminal-Icons -Repository PSGallery
+# Install-Module -Name PSFzf -Scope CurrentUser
 # git clone https://github.com/scaryrawr/winwal "$HOME\Documents\PowerShell\Modules\winwal"
 # rm -Path "$HOME\Documents\PowerShell\Modules\winwal\.git" -r -fo
 # winget install imagemagick.imagemagick
@@ -253,7 +255,7 @@ $global:fastfetch = if (Test-CommandExists fastfetch) { 'fastfetch' } else { $nu
 
 function Validate-Dependencies {
     $requiredCommands = @('oh-my-posh', 'zoxide', 'fzf', 'rg', 'fastfetch', 'nvim', 'fd')
-    $requiredModules = @('Terminal-Icons', 'winwal')
+    $requiredModules = @('Terminal-Icons', 'winwal', 'PSFzf')
 
     $missingCommands = $requiredCommands | Where-Object { -not (Test-CommandExists $_) }
     $missingModules = $requiredModules | Where-Object { -not (Get-Module -ListAvailable -Name $_) }
@@ -304,11 +306,19 @@ function Initialize-Winwal {
 # FZF color sync lazy loading
 $global:__fzf_sync_init_done = $false
 function Initialize-FZFColors {
+    param(
+        [switch]$Silent    # Suppress success message when called with -Silent
+    )
+    
     # Lazy load FZF color sync only when needed
     if ($global:__fzf_sync_init_done) { return }
 
     try {
-        & "$PSScriptRoot\Scripts\sync_fzf.ps1"
+        if ($Silent) {
+            & "$PSScriptRoot\Scripts\sync_fzf.ps1" -Silent
+        } else {
+            & "$PSScriptRoot\Scripts\sync_fzf.ps1"
+        }
         $global:__fzf_sync_init_done = $true
     } catch {
         Write-Verbose "Failed to sync FZF colors: $($_.Exception.Message)"
@@ -318,11 +328,19 @@ function Initialize-FZFColors {
 # FD color sync lazy loading
 $global:__fd_sync_init_done = $false
 function Initialize-FDColors {
+    param(
+        [switch]$Silent    # Suppress success message when called from Initialize-PSFZF
+    )
+    
     # Lazy load FD color sync only when needed
     if ($global:__fd_sync_init_done) { return }
 
     try {
-        & "$PSScriptRoot\Scripts\sync_fd.ps1"
+        if ($Silent) {
+            & "$PSScriptRoot\Scripts\sync_fd.ps1" -Silent
+        } else {
+            & "$PSScriptRoot\Scripts\sync_fd.ps1"
+        }
         $global:__fd_sync_init_done = $true
     } catch {
         Write-Verbose "Failed to sync FD colors: $($_.Exception.Message)"
@@ -649,8 +667,8 @@ if (Test-CommandExists zoxide) {
         # Jump to a directory using interactive search.
         # Simple implementation using zoxide's built-in fzf integration
         function global:__zoxide_zi {
-            # Initialize FZF colors on first use
-            Initialize-FZFColors
+            # Initialize PSFZF on first use
+            Initialize-PSFZF
             $result = __zoxide_bin query -i -- @args
             if ($LASTEXITCODE -eq 0) {
                 __zoxide_cd $result $true
@@ -810,91 +828,73 @@ if (Test-CommandExists Set-PSReadLineOption) {
 }
 #endregion
 
-#region Custom FZF Integration
-# Custom fzf integrations for PowerShell without PSFzf dependency
+#region PSFZF Integration
+# Simplified fzf integration using PSFZF module
 
-# Set consistent FZF options for all fzf invocations (including zoxide)
-if (-not $env:FZF_DEFAULT_OPTS) {
-    $env:FZF_DEFAULT_OPTS = '--height 40% --reverse --border --ansi'
-}
-# Ensure zoxide uses the same fzf options as our custom bindings
-if (-not $env:_ZO_FZF_OPTS) {
-    $env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
-}
+# PSFZF lazy loading
+$global:__psfzf_init_done = $false
+function Initialize-PSFZF {
+    # Lazy load PSFZF module only when needed
+    if ($global:__psfzf_init_done) { return }
 
-# Set up FZF_DEFAULT_COMMAND for file searches
-if (-not $env:FZF_DEFAULT_COMMAND) {
-    if (Test-CommandExists fd) {
-        # Use fd for faster, more intelligent file searching
-        $env:FZF_DEFAULT_COMMAND = 'fd --hidden --follow --exclude ".git/**" --exclude "node_modules/**" --type f'
-    } elseif (Test-CommandExists rg) {
-        # Fallback to ripgrep
-        $env:FZF_DEFAULT_COMMAND = 'rg --hidden --follow --glob "!.git/**" --glob "!node_modules/**"'
-    } else {
-        # Fallback to PowerShell Get-ChildItem
-        $env:FZF_DEFAULT_COMMAND = "Get-ChildItem -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName"
+    if (-not (Get-Module -ListAvailable -Name PSFzf)) {
+        Write-Host "PSFZF module not found. Install with: Install-Module -Name PSFzf -Repository PSGallery" -ForegroundColor Yellow
+        return
     }
-}
 
-# Simple PSReadLine integration for FZF
-if (Test-CommandExists fzf) {
     try {
-        # Ctrl+T: Fuzzy file search and insert path
-        Set-PSReadLineKeyHandler -Key Ctrl+t -ScriptBlock {
-            param($key, $arg)
-            try {
-                # Initialize FZF colors on first use
-                Initialize-FZFColors
+        Import-Module PSFzf -ErrorAction Stop
 
-                # Simple pipeline approach for file search using fd, rg, or Get-ChildItem
-                if (Test-CommandExists fd) {
-                    # Use fd with explicit flags
-                    $files = fd --hidden --follow --exclude .git --exclude node_modules 2>$null
-                } elseif (Test-CommandExists rg) {
-                    $files = rg --files --hidden --follow --glob '!.git/**' --glob '!node_modules/**' 2>$null
-                } else {
-                    $files = Get-ChildItem -Recurse -File -Force -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '\\.git|node_modules' } | Select-Object -ExpandProperty FullName
-                }
+        # Enable default keybindings (Ctrl+t, Ctrl+r)
+        Set-PsFzfOption -PSReadlineChordProvider 'Ctrl+t' -PSReadlineChordReverseHistory 'Ctrl+r'
 
-                if ($files) {
-                    $selection = $files | fzf --prompt="File> " --header="Select file"
-                    if ($selection) {
-                        [Microsoft.PowerShell.PSConsoleReadLine]::Insert($selection.Trim())
-                    }
-                }
-            } catch {
-                Write-Verbose "Error in Ctrl+t handler: $($_.Exception.Message)"
+        # Initialize FZF colors first to get color scheme (silent mode)
+        Initialize-FZFColors -Silent
+
+        # Configure PSFZF with different styles for different commands
+        $env:FZF_CTRL_T_OPTS = "--height 80% --layout reverse --border $env:FZF_DEFAULT_OPTS --style full --preview 'bat --color=always {}' --preview-window '~3'"
+
+        # Set up FZF_DEFAULT_COMMAND for file searches
+        if (-not $env:FZF_DEFAULT_COMMAND) {
+            if (Test-CommandExists fd) {
+                $env:FZF_DEFAULT_COMMAND = 'fd --hidden --follow --exclude ".git/**" --exclude "node_modules/**" --type f'
+            } elseif (Test-CommandExists rg) {
+                $env:FZF_DEFAULT_COMMAND = 'rg --hidden --follow --glob "!.git/**" --glob "!node_modules/**"'
+            } else {
+                $env:FZF_DEFAULT_COMMAND = "Get-ChildItem -Recurse -Force -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName"
             }
         }
 
-        # Ctrl+R: Fuzzy history search using history file
-        Set-PSReadLineKeyHandler -Key Ctrl+r -ScriptBlock {
-            param($key, $arg)
-            try {
-                # Initialize FZF colors on first use
-                Initialize-FZFColors
+        $env:FZF_CTRL_R_OPTS = "--height 40% --reverse --border --ansi"
 
-                # Read history from PSReadLine history file and show in fzf
-                $historyPath = (Get-PSReadLineOption).HistorySavePath
-                if (Test-Path $historyPath) {
-                    $history = Get-Content $historyPath -ErrorAction SilentlyContinue | Where-Object { $_ -ne "" }
-                    if ($history) {
-                        $selection = $history | fzf --prompt="History> " --header="Select command from history"
-                        if ($selection) {
-                            [Microsoft.PowerShell.PSConsoleReadLine]::RevertLine()
-                            [Microsoft.PowerShell.PSConsoleReadLine]::Insert($selection.Trim())
-                        }
-                    }
-                }
-            } catch {
-                Write-Verbose "Error in Ctrl+r handler: $($_.Exception.Message)"
-            }
-        }
+        # Set up zoxide to use specific options with colors from FZF_DEFAULT_OPTS
+        $env:_ZO_FZF_OPTS = "--height 40% --reverse --border --ansi $env:FZF_DEFAULT_OPTS"
+
+        $global:__psfzf_init_done = $true
     } catch {
-        Write-Verbose "PSReadLine not available for custom fzf integration"
+        Write-Verbose "Failed to import PSFZF module: $($_.Exception.Message)"
     }
-} else {
-    Write-Host "fzf command not found. Install fzf for fuzzy search functionality: https://github.com/junegunn/fzf" -ForegroundColor Yellow
+}
+
+# Set up keybindings that will initialize PSFZF on first use
+if (Test-CommandExists Set-PSReadLineKeyHandler) {
+    # Ctrl+T for fuzzy file selection
+    Set-PSReadLineKeyHandler -Chord 'Ctrl+t' -ScriptBlock {
+        Initialize-PSFZF
+        # After initialization, trigger the actual PSFZF function if module loaded successfully
+        if ($global:__psfzf_init_done) {
+            Invoke-FuzzyZLocation
+        }
+    }
+
+    # Ctrl+R for fuzzy history search
+    Set-PSReadLineKeyHandler -Chord 'Ctrl+r' -ScriptBlock {
+        Initialize-PSFZF
+        # After initialization, trigger the actual PSFZF function if module loaded successfully
+        if ($global:__psfzf_init_done) {
+            Invoke-FuzzyHistory
+        }
+    }
 }
 #endregion
 
@@ -1078,8 +1078,8 @@ function nf([string]$name) {
 function ff([string]$pattern) {
     # Find files by name pattern recursively using fd or fallback to ripgrep/Get-ChildItem
     if (Test-CommandExists fd) {
-        # Initialize FD colors for consistent theming
-        Initialize-FDColors
+        # Initialize FD colors for consistent theming (silent mode)
+        Initialize-FDColors -Silent
         # Use fd with explicit flags and LS_COLORS for theming
         fd --hidden --follow --exclude .git --exclude node_modules --color=always $pattern
     } elseif (Test-CommandExists rg) {

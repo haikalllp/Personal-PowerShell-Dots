@@ -4,7 +4,8 @@
 
 param(
     [switch]$FromStatic,   # Force static PSColors fallback
-    [switch]$Print         # Print effective values for verification
+    [switch]$Print,        # Print effective values for verification
+    [switch]$Silent        # Suppress success message when called from other functions
 )
 
 $walPath = "$env:USERPROFILE\.cache\wal\colors.json"
@@ -62,28 +63,14 @@ $colorMap = @(
 
 $colorOpt = "--color=$colorMap"
 
-# Merge into FZF_DEFAULT_OPTS (preserve existing flags, remove old --color if present)
-if ([string]::IsNullOrWhiteSpace($env:FZF_DEFAULT_OPTS)) {
-    # If FZF_DEFAULT_OPTS is not set, use default flags
-    $base = '--height 40% --reverse --border --ansi'
-} else {
-    # Preserve existing flags but remove any existing --color
-    $base = ($env:FZF_DEFAULT_OPTS -replace '--color=("[^"]+"|\S+)', '').Trim()
-    # If base is empty after removing color, use default flags
-    if ([string]::IsNullOrWhiteSpace($base)) {
-        $base = '--height 40% --reverse --border --ansi'
-    }
+# ONLY set colors in FZF_DEFAULT_OPTS (layout options are handled by PSFZF module)
+$env:FZF_DEFAULT_OPTS = $colorOpt
+
+# Show success message for color sync (unless silent mode)
+if (-not $Silent) {
+    Write-Host "FZF Colors Loaded" -ForegroundColor Green
 }
-$env:FZF_DEFAULT_OPTS = @($base, $colorOpt) -join ' ' -replace '\s+', ' '
-
-# Ensure zoxide interactive uses same palette and base flags as Ctrl+r/Ctrl+t
-# Mirror full FZF_DEFAULT_OPTS so zi gets --height 40% --reverse --border --ansi + colors
-$env:_ZO_FZF_OPTS = $env:FZF_DEFAULT_OPTS
-
-# Show success message for color sync
-Write-Host "FZF Colors Loaded" -ForegroundColor Green
 
 if ($Print) {
     Write-Host "FZF_DEFAULT_OPTS: $($env:FZF_DEFAULT_OPTS)"
-    Write-Host "_ZO_FZF_OPTS   : $($env:_ZO_FZF_OPTS)"
 }
