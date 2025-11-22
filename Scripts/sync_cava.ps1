@@ -96,7 +96,8 @@ $newConfig = $newConfig -replace ";\s*(horizontal_gradient\s*=\s*1)", "horizonta
 $newConfig = $newConfig -replace "gradient\s*=\s*0", "gradient = 1"
 
 # Write the updated content to the config file
-$newConfig | Set-Content $configPath
+# No newlines to avoid issues with cava parsing
+$newConfig | Set-Content $configPath -NoNewline
 
 Write-Host "Cava config updated with pywal colors"
 Write-Host "Vertical gradient colors updated:"

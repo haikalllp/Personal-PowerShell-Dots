@@ -39,7 +39,8 @@ $currentConfig = $currentConfig -replace "(?s)(focused_window:.*?border:.*?color
 $currentConfig = $currentConfig -replace "(?s)(other_windows:.*?border:.*?color:\s*)'#[A-Fa-f0-9]+'", "`$1'$color0'"
 
 # Write the updated content back to the config file
-$currentConfig | Set-Content $configPath
+# No newlines to avoid issues with GlazeWM parsing
+$currentConfig | Set-Content $configPath -NoNewline
 
 # reload glazewm to apply changes
 glazewm command wm-reload-config

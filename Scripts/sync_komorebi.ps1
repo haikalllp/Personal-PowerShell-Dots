@@ -56,7 +56,8 @@ $currentConfig.border_colours.unfocused = $color0
 $currentConfig.border_colours.unfocused_locked = $color0
 
 # Convert back to JSON and write to file
-$currentConfig | ConvertTo-Json -Depth 10 | Set-Content $configPath
+# No newlines to avoid issues with komorebi parsing
+$currentConfig | ConvertTo-Json -Depth 10 | Set-Content $configPath -NoNewline
 
 # Reload komorebi to apply changes
 komorebic reload-configuration
