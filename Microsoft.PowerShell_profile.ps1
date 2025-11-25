@@ -245,10 +245,6 @@ function Test-CommandExists {
     }
 }
 
-# Define fastfetch command for consistent usage throughout the profile
-# Check if fastfetch is available and use the same reference everywhere
-$global:fastfetch = if (Test-CommandExists fastfetch) { 'fastfetch' } else { $null }
-
 #================================================================================
 # Dependency Validation System
 #================================================================================
@@ -1695,16 +1691,16 @@ if ($global:ClearOnStartup) {
 
 # Force Fastfetch to use YOUR config every time (bypass path confusion)
 # Only run if window size is sufficient (minimum 60x22)
-if ($global:fastfetch) {
+if (Test-CommandExists fastfetch) {
     try {
         $windowSize = $Host.UI.RawUI.WindowSize
         $fastfetchConfig = Join-Path $HOME ".config\fastfetch\config.jsonc"
         if ($windowSize.Width -ge 60 -and $windowSize.Height -ge 22) {
-            & $global:fastfetch -c $fastfetchConfig
+            & fastfetch -c $fastfetchConfig
         }
     } catch {
         # Fallback if window size detection fails
-        & $global:fastfetch -c $fastfetchConfig
+        & fastfetch -c $fastfetchConfig
     }
 }
 
