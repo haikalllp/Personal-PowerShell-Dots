@@ -847,12 +847,8 @@ function Initialize-PSFZF {
         # Initialize FZF colors first to get color scheme (silent mode)
         Initialize-FZFColors -Silent
 
-        # Get current user and drive info for bash preview script
-        $name = $env:USERNAME
-        $drive = $env:SystemDrive.TrimEnd(':').ToLower()
-
         # Ctrl t options for file/directory selection with preview
-        $env:FZF_CTRL_T_OPTS = "--height 80% --layout reverse --border $env:FZF_DEFAULT_OPTS --style full --preview 'bash /mnt/$drive/Users/$name/Documents/PowerShell/Scripts/fzf-preview.sh {}' --preview-window '~3'"
+        $env:FZF_CTRL_T_OPTS = "--height 80% --layout reverse --border $env:FZF_DEFAULT_OPTS --style full"
         # Set up FZF_DEFAULT_COMMAND for file searches
         if (-not $env:FZF_DEFAULT_COMMAND) {
             if (Test-CommandExists fd) {
@@ -1295,12 +1291,12 @@ function Reload-Profile {
 
 function winutil {
     # Run the WinUtil full-release script
-    try { irm https://christitus.com/win | iex } catch { Add-ProfileWarning "Failed to load winutil: $($_.Exception.Message)" }
+    try { Invoke-RestMethod https://christitus.com/win | Invoke-Expression } catch { Add-ProfileWarning "Failed to load winutil: $($_.Exception.Message)" }
 }
 
 function winutildev {
     # Run the WinUtil pre-release script
-    try { irm https://christitus.com/windev | iex } catch { Add-ProfileWarning "Failed to load winutildev: $($_.Exception.Message)" }
+    try { Invoke-RestMethod https://christitus.com/windev | Invoke-Expression } catch { Add-ProfileWarning "Failed to load winutildev: $($_.Exception.Message)" }
 }
 
 function Get-PubIP {
@@ -1323,14 +1319,14 @@ function export() {
 
     $fullArgs = $Arguments -join ' '
     $pattern = '([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(?:"([^"]*)"|''([^'']*)''|([^ \t\r\n]+))'
-    $matches = [regex]::Matches($fullArgs, $pattern)
+    $matchThis = [regex]::Matches($fullArgs, $pattern)
 
-    if ($matches.Count -eq 0) {
+    if ($matchThis.Count -eq 0) {
         Write-Host "Error: No valid KEY=value pairs found" -ForegroundColor (Get-ProfileColor 'UI' 'Error')
         return
     }
 
-    foreach ($match in $matches) {
+    foreach ($match in $matchThis) {
         $name = $match.Groups[1].Value
         $value = $match.Groups[2].Success ? $match.Groups[2].Value :
                  $match.Groups[3].Success ? $match.Groups[3].Value :
