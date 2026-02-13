@@ -14,6 +14,7 @@ A comprehensive PowerShell profile configuration that enhances the Windows comma
   - PowerShell (PSReadLine syntax highlighting and PSStyles)
   - Oh My Posh prompt theme
   - FZF fuzzy finder
+  - OpenCode theme
   - Cava audio visualizer
   - GlazeWM window manager
   - Komorebi window manager
@@ -103,6 +104,7 @@ winget install imagemagick.imagemagick
 - **Cava**: Console-based audio visualizer
 - **BetterDiscord**: Enhanced Discord client
 - **Pywalfox**: Firefox theme sync
+- **OpenCode**: CLI tool requiring theme sync
 
 ---
 
@@ -185,12 +187,13 @@ $global:DefaultEditor = "vscode"
 $global:WindowTilingManager = "komorebi"
 
 # Optional Theme Sync Configuration
-# Set to $true if you have the corresponding application installed and want theme sync
+# Set to $true if you have corresponding application installed and want theme sync
 $global:SyncYasb = $true             # Set to $true if using Yasb and want pywal theme sync
 $global:SyncNeovim = $true           # Set to $true if using Neovim
 $global:SyncCava = $true             # Set to $true if using Cava
 $global:SyncBetterDiscord = $false   # Set to $true if using BetterDiscord
 $global:SyncPywalfox = $true         # Set to $true if using Pywalfox
+$global:SyncOpenCode = $true         # Set to $true if using OpenCode
 
 # Startup Diagnostics Configuration
 # Set to $false to prevent Clear-Host from clearing warnings/errors during startup
@@ -330,6 +333,8 @@ cmd.exe /c start /min pwsh -Command \"update-colors -b colorthief\"
 - PowerShell (PSReadLine/PSStyles) colors
 - Oh My Posh prompt theme
 - FZF theme
+- OpenCode theme
+- Neovim theme
 
 ##### Optional Syncs with:
 - GlazeWM (optional)
@@ -384,6 +389,8 @@ cmd.exe /c start /min pwsh -Command \"update-colors -b colorthief\"
 - [`fix_json_formatting.ps1`](Scripts/fix_json_formatting.ps1) - Fixes JSON formatting issues in pywal colors for Windows path compatibility
 - [`sync_fzf.ps1`](Scripts/sync_fzf.ps1) - Syncs FZF fuzzy finder colors with pywal theme
 - [`sync_fd.ps1`](Scripts/sync_fd.ps1) - Syncs fd file finder colors using LS_COLORS with pywal theme
+- [`sync_neovim.ps1`](Scripts/sync_neovim.ps1) - Syncs Neovim theme with pywal colors
+- [`sync_opencodetheme.ps1`](Scripts/sync_opencodetheme.ps1) - Syncs OpenCode theme with pywal colors
 - [`sync_cava.ps1`](Scripts/sync_cava.ps1) - Syncs Cava audio visualizer gradient colors with pywal theme
 - [`sync_discord.ps1`](Scripts/sync_discord.ps1) - Syncs BetterDiscord theme with pywal colors
 - [`sync_glazewm.ps1`](Scripts/sync_glazewm.ps1) - Syncs GlazeWM window manager theme with pywal colors

@@ -75,6 +75,7 @@ $global:SyncNeovim = $true           # Set to $true if using Neovim
 $global:SyncCava = $true             # Set to $true if using Cava
 $global:SyncBetterDiscord = $false   # Set to $true if using BetterDiscord
 $global:SyncPywalfox = $true         # Set to $true if using Pywalfox
+$global:SyncOpenCode = $true         # Set to $true if using OpenCode
 
 # Startup Diagnostics Configuration
 # Set to $false to prevent Clear-Host from clearing warnings/errors during startup
@@ -1559,6 +1560,18 @@ function update-colors {
                 Write-Host "Neovim theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
             } catch {
                 Add-ProfileWarning "Failed to sync Neovim theme: $($_.Exception.Message)"
+            }
+        }
+
+        # Sync OpenCode theme with the new color palette (only if OpenCode is enabled)
+        if ($global:SyncOpenCode) {
+            try {
+                Write-Host "Syncing OpenCode theme..." -ForegroundColor (Get-ProfileColor 'UI' 'Info')
+                $opencodeScript = Join-Path $PSScriptRoot "Scripts\sync_opencodetheme.ps1"
+                & $opencodeScript
+                Write-Host "OpenCode theme synced successfully!" -ForegroundColor (Get-ProfileColor 'UI' 'Success')
+            } catch {
+                Add-ProfileWarning "Failed to sync OpenCode theme: $($_.Exception.Message)"
             }
         }
 
